@@ -3,17 +3,25 @@ import functools
 import elements
 import embodied
 import gym
+import gymnasium
 import numpy as np
+import minigrid
+from minigrid.wrappers import RGBImgObsWrapper
 
 
 class FromGym(embodied.Env):
 
   def __init__(self, env, obs_key='image', act_key='action', **kwargs):
     if isinstance(env, str):
-      self._env = gym.make(env, **kwargs)
+      if "MiniGrid" in env:
+        self._env = gymnasium.make(env, **kwargs)
+        self._env = RGBImgObsWrapper(self._env)
+      else:
+        self._env = gym.make(env, **kwargs)
     else:
       assert not kwargs, kwargs
       self._env = env
+      
     self._obs_dict = hasattr(self._env.observation_space, 'spaces')
     self._act_dict = hasattr(self._env.action_space, 'spaces')
     self._obs_key = obs_key
@@ -54,20 +62,51 @@ class FromGym(embodied.Env):
     spaces['reset'] = elements.Space(bool)
     return spaces
 
+  def reset(self, **kwargs):
+    """Convenience reset that supports gym and gymnasium signatures."""
+    result = self._env.reset(**kwargs)
+    # gym: obs
+    # gymnasium: (obs, info)
+    if isinstance(result, tuple) and len(result) == 2:
+      obs, info = result
+      self._info = info
+    else:
+      obs = result
+      self._info = {}
+      
+    self._done = False
+    return self._obs(obs, 0.0, is_first=True)
+
   def step(self, action):
     if action['reset'] or self._done:
       self._done = False
-      obs = self._env.reset()
+      obs = self.reset()
       return self._obs(obs, 0.0, is_first=True)
     if self._act_dict:
       action = self._unflatten(action)
     else:
       action = action[self._act_key]
-    obs, reward, self._done, self._info = self._env.step(action)
+    result = self._env.step(action)
+    
+    # Normalize different step signatures:
+    # gym: obs, reward, done, info
+    # gymnasium: obs, reward, terminated, truncated, info
+    if len(result) == 4:
+      obs, reward, done, info = result
+      terminated = bool(done)
+      truncated = False
+    elif len(result) == 5:
+      obs, reward, terminated, truncated, info = result
+      done = bool(terminated or truncated)
+    
+
+    self._done = bool(done)
+    self._info = info or {}
     return self._obs(
         obs, reward,
-        is_last=bool(self._done),
-        is_terminal=bool(self._info.get('is_terminal', self._done)))
+        is_last=bool(done),
+        is_terminal=bool(self._info.get('is_terminal', done)))
+
 
   def _obs(
       self, obs, reward, is_first=False, is_last=False, is_terminal=False):
@@ -82,8 +121,11 @@ class FromGym(embodied.Env):
         is_terminal=is_terminal)
     return obs
 
-  def render(self):
-    image = self._env.render('rgb_array')
+  def render(self, mode='rgb_array'):
+    try:
+      image = self._env.render(mode)
+    except TypeError:
+      image = self._env.render()
     assert image is not None
     return image
 

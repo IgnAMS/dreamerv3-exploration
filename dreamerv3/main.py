@@ -214,6 +214,9 @@ def make_env(config, index, **overrides):
   if suite == 'memmaze':
     from embodied.envs import from_gym
     import memory_maze  # noqa
+  if suite == 'minigrid':
+    from embodied.envs import from_gym
+    import minigrid
   ctor = {
       'dummy': 'embodied.envs.dummy:Dummy',
       'gym': 'embodied.envs.from_gym:FromGym',
@@ -231,6 +234,9 @@ def make_env(config, index, **overrides):
       'bsuite': 'embodied.envs.bsuite:BSuite',
       'memmaze': lambda task, **kw: from_gym.FromGym(
           f'MemoryMaze-{task}-v0', **kw),
+      'minigrid': lambda task, **kw: from_gym.FromGym(
+        f'MiniGrid-Empty-{task}-v0', **kw
+      ),
   }[suite]
   if isinstance(ctor, str):
     module, cls = ctor.split(':')
