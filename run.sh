@@ -3,7 +3,7 @@ set -euo pipefail
 
 # --- Ajusta la ruta de tu virtualenv aquí si hace falta ---
 # Por ejemplo: /home/iamonardes/.venvs/dreamer o relative path ./virtualenv
-VENV="/home/iamonardes/dreamerv3/virtualenv"
+VENV="/home/iamonardes/dreamerv3-exploration/.venv"
 if [ -d "$VENV" ]; then
   # activar venv
   # shellcheck disable=SC1090
