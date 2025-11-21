@@ -222,9 +222,9 @@ debug:
 
 # NUEVO: MiniGrid
 minigrid:
-  task: 5x5
+  task: minigrid_5x5
   run: { steps: 5e4, envs: 1, train_ratio: 256 }
 
 minigrid8:
-  task: 8x8
+  task: minigrid_8x8
   run: {steps: 5e4, envs: 1, train_ratio: 256}
