@@ -43,6 +43,7 @@ class FromGym(embodied.Env):
       spaces = self._flatten(self._env.observation_space.spaces)
     else:
       spaces = {self._obs_key: self._env.observation_space}
+    print(spaces)
     spaces = {k: self._convert(v) for k, v in spaces.items()}
     return {
         **spaces,
@@ -162,6 +163,7 @@ class FromGym(embodied.Env):
   def _convert(self, space):
     if hasattr(space, 'n'):
       return elements.Space(np.int32, (), 0, space.n)
+    print(space)
     low = getattr(space, 'low', None)
     high = getattr(space, 'high', None)
     return elements.Space(space.dtype, space.shape, low, high)
