@@ -24,7 +24,7 @@ class MiniGrid(embodied.Env):
                **kwargs):
         assert resize in ('opencv', 'pillow'), resize
         # construir env id si el usuario pasó solo "5x5"
-        suite, task = task.split("_")
+        print(task)
         if isinstance(task, str) and ("MiniGrid" in task or task.startswith("MiniGrid-")):
             env_id = task
         else:
