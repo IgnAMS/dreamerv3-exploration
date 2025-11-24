@@ -234,9 +234,7 @@ def make_env(config, index, **overrides):
       'bsuite': 'embodied.envs.bsuite:BSuite',
       'memmaze': lambda task, **kw: from_gym.FromGym(
           f'MemoryMaze-{task}-v0', **kw),
-      'minigrid': lambda task, **kw: from_gym.FromGym(
-        f'MiniGrid-Empty-{task}-v0', **kw
-      ),
+      'minigrid': 'embodied.envs.minigrid:MiniGrid',
   }[suite]
   if isinstance(ctor, str):
     module, cls = ctor.split(':')
