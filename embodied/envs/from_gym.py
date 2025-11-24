@@ -162,4 +162,6 @@ class FromGym(embodied.Env):
   def _convert(self, space):
     if hasattr(space, 'n'):
       return elements.Space(np.int32, (), 0, space.n)
-    return elements.Space(space.dtype, space.shape, space.low, space.high)
+    low = getattr(space, 'low', None)
+    high = getattr(space, 'high', None)
+    return elements.Space(space.dtype, space.shape, low, high)
