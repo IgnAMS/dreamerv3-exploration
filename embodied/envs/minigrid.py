@@ -51,20 +51,17 @@ class SimpleGrid(embodied.Env):
     def env(self):
         return self._from_gym
 
-    """
+
     @property
     def obs_space(self):
         # Copiamos el obs_space declarado por FromGym y forzamos image a uint8 (H,W,3)
         spaces = self._from_gym.obs_space.copy()
         spaces['image'] = elements.Space(np.uint8, (*self.size, 3))
         return spaces
-    """
     
-    """
     @property
     def act_space(self):
         return self._from_gym.act_space
-    """
     
     def reset(self, **kwargs):
         result = self._from_gym.reset(**kwargs)
