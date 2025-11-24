@@ -110,53 +110,17 @@ class SimpleGrid(embodied.Env):
             return obs
 
         img = obs.get('image', None)
-        if isinstance(img, np.ndarray) and img.ndim == 3 and img.shape[2] == 3:
-            # es una imagen — la resizeamos a self.size si hace falta
-            if (img.shape[0], img.shape[1]) != self.size:
-                obs['image'] = self._resize(img, self.size, self.resize)
-            else:
-                # asegurar dtype uint8
-                if img.dtype != np.uint8:
-                    obs['image'] = img.astype(np.uint8)
-            return obs
-        print("Ensure image 1")
-        # Si llegamos aquí, obs['image'] no es una imagen RGB: pedimos frame al renderer
-        frame = None
-        # si tenemos renderer y soporta tile_size en render:
-        if self._renderer is not None:
-            try:
-                if self.tile_size is not None:
-                    frame = self._renderer.render("rgb_array", tile_size=self.tile_size)
-                else:
-                    frame = self._renderer.render("rgb_array")
-            except TypeError:
-                # algunos renders no aceptan tile_size
-                try:
-                    frame = self._renderer.render("rgb_array")
-                except Exception:
-                    frame = None
-            except Exception:
-                frame = None
-        
-        if frame is None:
-            print("Ensure image 2")
-            # Fallback: si obs contiene 'image' simbólica (grid ints), intentamos convertirla a rgb
-            # pero eso requiere lógica de palette; por simplicidad dejamos la misma observación.
-            return obs
-
-        # ahora tenemos frame; resizearlo si procede
-        if (frame.shape[0], frame.shape[1]) != self.size:
-            print("Ensure 3")
-            frame = self._resize(frame, self.size, self.resize)
-        
-        # asegurar uint8
-        if frame.dtype != np.uint8:
-            print("Ensure 4")
-            frame = (255 * np.clip(frame, 0, 1)).astype(np.uint8)
-
-        obs['image'] = frame
+        # es una imagen — la resizeamos a self.size si hace falta
+        if (img.shape[0], img.shape[1]) != self.size:
+            obs['image'] = self._resize(img, self.size, self.resize)
+        else:
+            # asegurar dtype uint8
+            if img.dtype != np.uint8:
+                obs['image'] = img.astype(np.uint8)
+            
         return obs
-
+        
+        
     def _resize(self, image, size, method):
         if method == 'opencv':
             import cv2
