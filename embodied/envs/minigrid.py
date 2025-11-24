@@ -69,12 +69,15 @@ class SimpleGrid(embodied.Env):
     def reset(self, **kwargs):
         result = self._from_gym.reset(**kwargs)
         obs = self._ensure_image(result)
+        if "mission" in obs:
+            del obs["mission"]
         return obs
 
     def step(self, action):
         result = self._from_gym.step(action)
         obs = self._ensure_image(result)
-        del obs["mission"]
+        if "mission" in obs:
+            del obs["mission"]
         return obs
 
     def close(self):
