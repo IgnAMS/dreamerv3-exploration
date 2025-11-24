@@ -2,6 +2,8 @@ import elements
 import embodied
 import numpy as np
 import minigrid
+from minigrid.minigrid_env import MiniGridEnv
+from minigrid.core.mission import MissionSpace
 from minigrid.wrappers import FullyObsWrapper, RGBImgPartialObsWrapper, RGBImgObsWrapper
 from . import from_gym
 import gymnasium as gym
@@ -12,7 +14,7 @@ from PIL import Image
 # we'll import the wrappers lazily below when needed
 
 
-class MiniGrid(embodied.Env):
+class SimpleGrid(embodied.Env):
     def __init__(self,
                task,
                size=(80, 80),
@@ -23,17 +25,7 @@ class MiniGrid(embodied.Env):
                render_mode='rgb_array',
                **kwargs):
         assert resize in ('opencv', 'pillow'), resize
-        # construir env id si el usuario pasó solo "5x5"
-        print(task)
-        if isinstance(task, str) and ("MiniGrid" in task or task.startswith("MiniGrid-")):
-            env_id = task
-        else:
-            env_id = f"MiniGrid-Empty-{task}-v0"
-
-        # import local from_gym factory
-
-        # Preparar gym env y aplicar wrappers *antes* de pasar a FromGym si hace falta
-        
+        env_id = f"MiniGrid-Empty-{task}-v0"        
         raw = gym.make(env_id, render_mode=render_mode, **kwargs)
 
         if full_obs:
@@ -52,44 +44,37 @@ class MiniGrid(embodied.Env):
         self.size = tuple(size)
         self.resize = resize
         self.tile_size = tile_size
+
         self._renderer = self._get_underlying_renderer(self._from_gym)
 
     @property
     def env(self):
         return self._from_gym
 
+    """
     @property
     def obs_space(self):
         # Copiamos el obs_space declarado por FromGym y forzamos image a uint8 (H,W,3)
         spaces = self._from_gym.obs_space.copy()
         spaces['image'] = elements.Space(np.uint8, (*self.size, 3))
         return spaces
-
+    """
+    
+    """
     @property
     def act_space(self):
         return self._from_gym.act_space
-
+    """
+    
     def reset(self, **kwargs):
-        # FromGym.reset() devuelve obs dict
-        res = self._from_gym.reset(**kwargs)
-        # some FromGym implementations may return (obs, info) — normalize:
-        if isinstance(res, tuple) and len(res) == 2:
-            obs, info = res
-        else:
-            obs = res
-            obs = self._ensure_image(obs)
-        
+        result = self._from_gym.reset(**kwargs)
+        obs = self._ensure_image(result)
         return obs
 
     def step(self, action):
-        # Forward action through FromGym
-        res = self._from_gym.step(action)
-        # FromGym likely returns an obs dict (or maybe tuple). Normalize:
-        if isinstance(res, tuple) and len(res) == 2:
-            obs, info = res
-        else:
-            obs = res
-            obs = self._ensure_image(obs)
+        result = self._from_gym.step(action)
+        obs = self._ensure_image(result)
+        del obs["mission"]
         return obs
 
     def close(self):
@@ -120,11 +105,6 @@ class MiniGrid(embodied.Env):
         return underlying
 
     def _ensure_image(self, obs):
-        """
-        Garantiza que obs['image'] sea una imagen RGB uint8 del tamaño self.size.
-        - Si obs ya contiene 'image' con shape (H,W,3) y tipo uint8 lo resizea.
-        - Si no, pide renderer.render('rgb_array', tile_size=...) y lo resizea.
-        """
         # obs puede ser dict o un objeto más; asumimos dict-like
         if not isinstance(obs, dict):
             return obs
@@ -139,7 +119,7 @@ class MiniGrid(embodied.Env):
                 if img.dtype != np.uint8:
                     obs['image'] = img.astype(np.uint8)
             return obs
-
+        print("Ensure image 1")
         # Si llegamos aquí, obs['image'] no es una imagen RGB: pedimos frame al renderer
         frame = None
         # si tenemos renderer y soporta tile_size en render:
@@ -157,18 +137,21 @@ class MiniGrid(embodied.Env):
                     frame = None
             except Exception:
                 frame = None
-
+        
         if frame is None:
+            print("Ensure image 2")
             # Fallback: si obs contiene 'image' simbólica (grid ints), intentamos convertirla a rgb
             # pero eso requiere lógica de palette; por simplicidad dejamos la misma observación.
             return obs
 
         # ahora tenemos frame; resizearlo si procede
         if (frame.shape[0], frame.shape[1]) != self.size:
+            print("Ensure 3")
             frame = self._resize(frame, self.size, self.resize)
         
         # asegurar uint8
         if frame.dtype != np.uint8:
+            print("Ensure 4")
             frame = (255 * np.clip(frame, 0, 1)).astype(np.uint8)
 
         obs['image'] = frame
