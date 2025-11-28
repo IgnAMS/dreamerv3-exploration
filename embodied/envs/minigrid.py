@@ -95,7 +95,7 @@ class SimpleGrid(embodied.Env):
         
         # renderer availability & tile_size
         out["has_renderer"] = np.array([1 if self._renderer is not None else 0], dtype=np.int8)
-        out["tile_size"] = np.array([self.tile_size], dtype=np.int32)
+        # out["tile_size"] = np.array([self.tile_size], dtype=np.int32)
 
         return out
     
