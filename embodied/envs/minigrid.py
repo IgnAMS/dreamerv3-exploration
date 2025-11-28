@@ -83,49 +83,19 @@ class SimpleGrid(embodied.Env):
         out = {}
         core = self._get_core_env()
         # grid size
-        gsize = None
-        try:
-            if core is not None:
-                # try common attributes
-                if hasattr(core, "grid_size"):
-                    gsize = getattr(core, "grid_size")
-                elif hasattr(core, "grid"):
-                    grid = getattr(core, "grid")
-                    gsize = getattr(grid, "height", None) or getattr(grid, "width", None)
-                elif hasattr(core, "width") and hasattr(core, "height"):
-                    gsize = (getattr(core, "height"), getattr(core, "width"))
-        except Exception:
-            gsize = None
-        out["grid_size"] = gsize
+        gsize = core.grid
+        out["grid_size"] = np.array([int(core.height), int(core.width)], dtype=np.int32)
 
         # agent position & dir (normalize to (row, col))
-        try:
-            if core is not None and hasattr(core, "agent_pos"):
-                pos = core.agent_pos  # often (x,y)
-                # convert to (row, col) = (y, x) which is natural for arrays
-                if isinstance(pos, (tuple, list)) and len(pos) >= 2:
-                    out["agent_pos"] = (int(pos[1]), int(pos[0]))
-                else:
-                    out["agent_pos"] = tuple(pos)
-            else:
-                out["agent_pos"] = None
-        except Exception:
-            out["agent_pos"] = None
-
-        try:
-            out["agent_dir"] = int(getattr(core, "agent_dir")) if core is not None and hasattr(core, "agent_dir") else None
-        except Exception:
-            out["agent_dir"] = None
-
-        # mission if available on core env
-        # try:
-        #     out["mission"] = getattr(core, "mission", None)
-        # except Exception:
-        #     out["mission"] = None
-
+        pos = core.agent_pos
+        row, col = int(pos[1]), int(pos[0])
+        out["agent_pos"] = np.array([row, col], dtype=np.int32)
+        out["agent_dir"] = core.agent_dir
+        # out["mission"] = core["mission"] 
+        
         # renderer availability & tile_size
-        out["has_renderer"] = self._renderer is not None
-        out["tile_size"] = self.tile_size
+        out["has_renderer"] = np.array([1 if self._renderer is not None else 0], dtype=np.int8)
+        out["tile_size"] = np.array([self.tile_size], dtype=np.int32)
 
         return out
     

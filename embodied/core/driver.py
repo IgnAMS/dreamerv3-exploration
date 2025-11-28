@@ -87,8 +87,9 @@ class Driver:
         infos[k] = np.stack([np.asarray(v) for v in vals])
       except Exception:
         infos[k] = np.array(vals, dtype=object)
-    
+
     trans = {**obs, **acts, **outs, **logs, **infos}
+    print(infos)
     for i in range(self.length):
       trn = elements.tree.map(lambda x: x[i], trans)
       [fn(trn, i, **self.kwargs) for fn in self.callbacks]
