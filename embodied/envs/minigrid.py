@@ -118,10 +118,10 @@ class SimpleGrid(embodied.Env):
             out["agent_dir"] = None
 
         # mission if available on core env
-        try:
-            out["mission"] = getattr(core, "mission", None)
-        except Exception:
-            out["mission"] = None
+        # try:
+        #     out["mission"] = getattr(core, "mission", None)
+        # except Exception:
+        #     out["mission"] = None
 
         # renderer availability & tile_size
         out["has_renderer"] = self._renderer is not None
