@@ -77,7 +77,7 @@ def train(make_agent, make_replay, make_env, make_stream, make_logger, args):
   driver.on_step(lambda tran, _: policy_fps.step())
   driver.on_step(replay.add)
   driver.on_step(logfn)
-  driver.on_step(lambda tran, _: heatmap.increase(tran))
+  driver.on_step(lambda tran, worker: heatmap.increase(tran, worker))
 
   stream_train = iter(agent.stream(make_stream(replay, 'train')))
   stream_report = iter(agent.stream(make_stream(replay, 'report')))
