@@ -131,6 +131,7 @@ def maybe_smooth(arr, sigma):
 def make_animation(accum_list, steps, sample_frame=None, outpath=OUT_ANIM, cmap=CMAP, fps=FPS, smooth_sigma=SMOOTH):
     fig, ax = plt.subplots(figsize=(5,5))
     plt.tight_layout()
+    fig.subplots_adjust(right=0.80)
     # choose vmax for color scaling (global max across frames)
     vmax = max(a.max() for a in accum_list) or 1.0
     im = None
@@ -177,7 +178,7 @@ def make_animation(accum_list, steps, sample_frame=None, outpath=OUT_ANIM, cmap=
 
 def interactive_view(accum_list, steps, sample_frame=None, cmap=CMAP, smooth_sigma=SMOOTH):
     fig, ax = plt.subplots(figsize=(5,5))
-    plt.subplots_adjust(bottom=0.15)
+    fig.subplots_adjust(right=0.80, bottom=0.15)
     vmax = max(a.max() for a in accum_list) or 1.0
     if sample_frame is None:
         img = ax.imshow(maybe_smooth(accum_list[0], smooth_sigma), cmap=cmap, origin="lower", vmax=vmax)
