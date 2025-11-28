@@ -135,5 +135,7 @@ def train(make_agent, make_replay, make_env, make_stream, make_logger, args):
       cp.save()
       with open(logdir / f"heatmap_{int(step)}.pkl", "wb") as f:
         pickle.dump(dict(heatmap.heatmap), f)
-
+        
+  with open(logdir / f"heatmap_{int(step)}.pkl", "wb") as f:
+        pickle.dump(dict(heatmap.heatmap), f)
   logger.close()
