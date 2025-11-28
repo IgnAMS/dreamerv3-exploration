@@ -1,0 +1,183 @@
+#!/usr/bin/env python3
+"""
+Carga heatmap_*.pkl de un logdir y genera:
+ - una animación (GIF/MP4) de la exploración acumulada
+ - una ventana interactiva con slider para inspeccionar cada snapshot
+
+Requisitos: numpy, matplotlib, pillow (para GIF) y opcionalmente ffmpeg (para MP4).
+"""
+import os
+import pickle
+import glob
+import re
+from pathlib import Path
+from collections import defaultdict
+import numpy as np
+import matplotlib.pyplot as plt
+from matplotlib import animation
+from matplotlib.widgets import Slider
+
+# ------------ CONFIG ------------
+LOGDIR = Path.home() / "logdir" / "dreamer" / "minigrid" / "size1m" / "01"
+OUT_ANIM = LOGDIR / "exploration.gif"   # o .mp4 si quieres mp4
+CMAP = "inferno"
+SMOOTH = 0.0   # gaussian sigma (0 = no smoothing). Requiere scipy.ndimage if >0
+FPS = 4
+# ---------------------------------
+
+def find_heatmap_files(logdir):
+    files = sorted(glob.glob(str(logdir / "heatmap_*.pkl")))
+    # sort by the integer in filename
+    def keyfn(p):
+        m = re.search(r"heatmap_(\d+)\.pkl$", p)
+        return int(m.group(1)) if m else 0
+    files = sorted(files, key=keyfn)
+    return files
+
+def load_heatmap_file(p):
+    with open(p, "rb") as f:
+        d = pickle.load(f)
+    # expect dict {(r,c): count}
+    return d
+
+def accumulate_heatmaps(files):
+    """
+    Returns:
+      steps: list of step numbers (from filenames)
+      accum_list: list of 2D numpy arrays with accumulated counts for each file
+      H,W: grid shape
+    """
+    dicts = []
+    steps = []
+    re_step = re.compile(r"heatmap_(\d+)\.pkl$")
+    # load all dicts
+    for pth in files:
+        m = re_step.search(pth)
+        step = int(m.group(1)) if m else None
+        d = load_heatmap_file(pth)
+        dicts.append(d)
+        steps.append(step)
+    # infer grid size
+    max_r = 0
+    max_c = 0
+    for d in dicts:
+        for (r, c) in d.keys():
+            if r > max_r: max_r = r
+            if c > max_c: max_c = c
+    H = max_r + 1
+    W = max_c + 1
+    # accumulate
+    accum_list = []
+    accum = np.zeros((H, W), dtype=float)
+    for d in dicts:
+        for (r, c), v in d.items():
+            accum[r, c] += v
+        accum_list.append(accum.copy())
+    return steps, accum_list, H, W
+
+def maybe_smooth(arr, sigma):
+    if sigma and sigma > 0:
+        try:
+            from scipy.ndimage import gaussian_filter
+            return gaussian_filter(arr, sigma=sigma)
+        except Exception:
+            print("scipy not available; skipping smoothing")
+            return arr
+    return arr
+
+def make_animation(accum_list, steps, sample_frame=None, outpath=OUT_ANIM, cmap=CMAP, fps=FPS, smooth_sigma=SMOOTH):
+    fig, ax = plt.subplots(figsize=(5,5))
+    plt.tight_layout()
+    # choose vmax for color scaling (global max across frames)
+    vmax = max(a.max() for a in accum_list) or 1.0
+    im = None
+
+    if sample_frame is None:
+        im = ax.imshow(maybe_smooth(accum_list[0], smooth_sigma), cmap=cmap, vmin=0, vmax=vmax, origin="lower")
+    else:
+        ax.imshow(sample_frame)
+        im = ax.imshow(maybe_smooth(accum_list[0], smooth_sigma), cmap=cmap, alpha=0.6, vmin=0, vmax=vmax, origin="lower")
+    cb = plt.colorbar(im, ax=ax, fraction=0.046, pad=0.04)
+    title = ax.set_title(f"step {steps[0]} (accum visits={accum_list[0].sum():.0f})")
+
+    def update(i):
+        data = maybe_smooth(accum_list[i], smooth_sigma)
+        im.set_data(data)
+        title.set_text(f"step {steps[i]} (accum visits={accum_list[i].sum():.0f})")
+        return (im,)
+
+    anim = animation.FuncAnimation(fig, update, frames=len(accum_list), blit=True, interval=1000/fps)
+
+    # Save
+    outpath = Path(outpath)
+    if outpath.suffix == ".gif":
+        try:
+            anim.save(str(outpath), writer='pillow', fps=fps)
+            print(f"Saved GIF to {outpath}")
+        except Exception as e:
+            print("Could not save GIF:", e)
+    else:
+        # try ffmpeg for mp4
+        try:
+            Writer = animation.writers['ffmpeg']
+            writer = Writer(fps=fps, metadata=dict(artist='me'), bitrate=1800)
+            anim.save(str(outpath), writer=writer)
+            print(f"Saved MP4 to {outpath}")
+        except Exception as e:
+            print("Could not save MP4 (ffmpeg missing?). Trying GIF fallback.")
+            try:
+                anim.save(str(outpath.with_suffix(".gif")), writer='pillow', fps=fps)
+                print("Saved GIF fallback")
+            except Exception as e2:
+                print("Failed to save animation:", e, e2)
+    plt.close(fig)
+
+def interactive_view(accum_list, steps, sample_frame=None, cmap=CMAP, smooth_sigma=SMOOTH):
+    fig, ax = plt.subplots(figsize=(5,5))
+    plt.subplots_adjust(bottom=0.15)
+    vmax = max(a.max() for a in accum_list) or 1.0
+    if sample_frame is None:
+        img = ax.imshow(maybe_smooth(accum_list[0], smooth_sigma), cmap=cmap, origin="lower", vmax=vmax)
+    else:
+        ax.imshow(sample_frame)
+        img = ax.imshow(maybe_smooth(accum_list[0], smooth_sigma), cmap=cmap, alpha=0.6, origin="lower", vmax=vmax)
+    title = ax.set_title(f"step {steps[0]} (visits={accum_list[0].sum():.0f})")
+    axcolor = 'lightgoldenrodyellow'
+    axslider = plt.axes([0.15, 0.05, 0.7, 0.03], facecolor=axcolor)
+    slider = Slider(axslider, 'frame', 0, len(accum_list)-1, valinit=0, valstep=1)
+
+    def update(val):
+        i = int(val)
+        img.set_data(maybe_smooth(accum_list[i], smooth_sigma))
+        title.set_text(f"step {steps[i]} (visits={accum_list[i].sum():.0f})")
+        fig.canvas.draw_idle()
+
+    slider.on_changed(update)
+    plt.show()
+
+def main():
+    files = find_heatmap_files(LOGDIR)
+    if not files:
+        print("No heatmap files found in", LOGDIR)
+        return
+    print("Found files:", files)
+    steps, accum_list, H, W = accumulate_heatmaps(files)
+    print(f"Grid size inferred: {H} x {W}, frames: {len(accum_list)}")
+
+    # try to find a sample frame to overlay (optional)
+    sample_frame = None
+    # look for 'first_frame.png' or an env render saved - adapt if you saved it elsewhere
+    candidate = LOGDIR / "first_frame_obs_completa.png"
+    if candidate.exists():
+        sample_frame = plt.imread(str(candidate))
+
+    # generate animation file
+    print("Generating animation...")
+    make_animation(accum_list, steps, sample_frame=sample_frame, outpath=OUT_ANIM, cmap=CMAP, fps=FPS, smooth_sigma=SMOOTH)
+
+    # show interactive viewer
+    print("Opening interactive viewer (close the window to finish).")
+    interactive_view(accum_list, steps, sample_frame=sample_frame, cmap=CMAP, smooth_sigma=SMOOTH)
+
+if __name__ == "__main__":
+    main()
