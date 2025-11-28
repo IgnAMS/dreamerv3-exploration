@@ -17,6 +17,12 @@ class Heatmap:
         # convert (x,y) -> (row,col)=(y,x) for indexing
         self.heatmap[(int(y), int(x))] += 1
 
+def filtered_replay(replay, space, tran):
+  filtered = {k: v for k, v in tran.items() if k in space}
+  replay.add(filtered)
+
+
+
 def train(make_agent, make_replay, make_env, make_stream, make_logger, args):
 
   agent = make_agent()
@@ -75,7 +81,7 @@ def train(make_agent, make_replay, make_env, make_stream, make_logger, args):
   driver = embodied.Driver(fns, parallel=not args.debug)
   driver.on_step(lambda tran, _: step.increment())
   driver.on_step(lambda tran, _: policy_fps.step())
-  driver.on_step(replay.add)
+  driver.on_step(lambda tran, _: filtered_replay(replay, agent.spaces.keys(), tran))
   driver.on_step(logfn)
   driver.on_step(lambda tran, worker: heatmap.increase(tran, worker))
 
