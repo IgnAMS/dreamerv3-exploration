@@ -19,7 +19,7 @@ from matplotlib.widgets import Slider
 
 # ------------ CONFIG ------------
 LOGDIR = Path.home() / "logdir" / "dreamer" / "minigrid" / "size1m" / "01"
-OUT_ANIM = LOGDIR / "exploration.gif"   # o .mp4 si quieres mp4
+OUT_ANIM = Path("exploration.gif") 
 CMAP = "inferno"
 SMOOTH = 0.0   # gaussian sigma (0 = no smoothing). Requiere scipy.ndimage if >0
 FPS = 4
