@@ -43,7 +43,6 @@ class FromGym(embodied.Env):
       spaces = self._flatten(self._env.observation_space.spaces)
     else:
       spaces = {self._obs_key: self._env.observation_space}
-    print(spaces)
     if 'mission' in spaces:
         del spaces['mission']
     spaces = {k: self._convert(v) for k, v in spaces.items()}

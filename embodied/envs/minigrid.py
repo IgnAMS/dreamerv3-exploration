@@ -51,7 +51,84 @@ class SimpleGrid(embodied.Env):
     def env(self):
         return self._from_gym
 
+    def _get_core_env(self):
+        """Descender wrappers hasta encontrar el core que expone agent_pos/agent_dir/grid."""
+        u = self._from_gym
+        for _ in range(10):
+            # common direct attributes (some wrappers expose them)
+            if hasattr(u, "agent_pos") and hasattr(u, "agent_dir"):
+                return u
+            # prefer unwrapped
+            if hasattr(u, "unwrapped"):
+                try:
+                    u = u.unwrapped
+                    continue
+                except Exception:
+                    pass
+            # descend typical wrapper attribute names
+            next_u = getattr(u, "env", None) or getattr(u, "_env", None) or getattr(u, "inner", None) or getattr(u, "inner_env", None)
+            if next_u is None or next_u is u:
+                break
+            u = next_u
+        return None
 
+    @property
+    def info(self):
+        """
+        Diccionario con metadatos útiles del entorno:
+          - grid_size / width / height (cuando se puede)
+          - agent_pos (row, col) y agent_dir si están disponibles
+          - has_renderer, tile_size
+        """
+        out = {}
+        core = self._get_core_env()
+        # grid size
+        gsize = None
+        try:
+            if core is not None:
+                # try common attributes
+                if hasattr(core, "grid_size"):
+                    gsize = getattr(core, "grid_size")
+                elif hasattr(core, "grid"):
+                    grid = getattr(core, "grid")
+                    gsize = getattr(grid, "height", None) or getattr(grid, "width", None)
+                elif hasattr(core, "width") and hasattr(core, "height"):
+                    gsize = (getattr(core, "height"), getattr(core, "width"))
+        except Exception:
+            gsize = None
+        out["grid_size"] = gsize
+
+        # agent position & dir (normalize to (row, col))
+        try:
+            if core is not None and hasattr(core, "agent_pos"):
+                pos = core.agent_pos  # often (x,y)
+                # convert to (row, col) = (y, x) which is natural for arrays
+                if isinstance(pos, (tuple, list)) and len(pos) >= 2:
+                    out["agent_pos"] = (int(pos[1]), int(pos[0]))
+                else:
+                    out["agent_pos"] = tuple(pos)
+            else:
+                out["agent_pos"] = None
+        except Exception:
+            out["agent_pos"] = None
+
+        try:
+            out["agent_dir"] = int(getattr(core, "agent_dir")) if core is not None and hasattr(core, "agent_dir") else None
+        except Exception:
+            out["agent_dir"] = None
+
+        # mission if available on core env
+        try:
+            out["mission"] = getattr(core, "mission", None)
+        except Exception:
+            out["mission"] = None
+
+        # renderer availability & tile_size
+        out["has_renderer"] = self._renderer is not None
+        out["tile_size"] = self.tile_size
+
+        return out
+    
     @property
     def obs_space(self):
         # Copiamos el obs_space declarado por FromGym y forzamos image a uint8 (H,W,3)

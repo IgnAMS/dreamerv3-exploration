@@ -5,7 +5,7 @@ ts bash run_cpu.sh python3 dreamerv3/main.py --logdir ~/logdir/dreamer/minigrid/
 
 ## Comando para correr el minigrid con GPU
 ```
-ts bash run_cpu.sh python3 dreamerv3/main.py --logdir ~/logdir/dreamer/minigrid/size1m/01 --configs minigrid size1m --run.steps 100 --jax.platform gpu
+ts -G 1 bash run_gpu.sh python3 dreamerv3/main.py --logdir ~/logdir/dreamer/minigrid/size12m/01 --configs minigrid size12m --run.steps 10000
 ```
 
 
@@ -19,6 +19,3 @@ clave publica
 ```bash
 home/iamonardes/.ssh/deploy_minigrid_pub
 ```
-
-
-ts bash run.sh python3 dreamerv3/main.py --logdir ~/logdir/dreamer/minigrid/size1m/01 --configs minigrid size1m --run.steps 700 --jax.platform cpu

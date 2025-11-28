@@ -74,10 +74,25 @@ class Driver:
       mask = ~obs['is_last']
       acts = {k: self._mask(v, mask) for k, v in acts.items()}
     self.acts = {**acts, 'reset': obs['is_last'].copy()}
-    trans = {**obs, **acts, **outs, **logs}
+    
+    # NANO: NUEVO
+    # infos
+    raw_info = [env.info for env in self.envs]
+    keys_info = raw_info[0].keys() if raw_info else []
+    infos = {k: [] for k in keys_info}
+    for k in keys_info:
+      vals = [d.get(k, None) if isinstance(d, dict) else None for d in raw_info]
+      try:
+        # si todos son arrays/escalares compatibles, stack; si no, fallback to object array
+        infos[k] = np.stack([np.asarray(v) for v in vals])
+      except Exception:
+        infos[k] = np.array(vals, dtype=object)
+    
+    trans = {**obs, **acts, **outs, **logs, **infos}
     for i in range(self.length):
       trn = elements.tree.map(lambda x: x[i], trans)
       [fn(trn, i, **self.kwargs) for fn in self.callbacks]
+      
     step += len(obs['is_first'])
     episode += obs['is_last'].sum()
     return step, episode

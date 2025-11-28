@@ -4,7 +4,18 @@ from functools import partial as bind
 import elements
 import embodied
 import numpy as np
+import pickle 
+from collections import defaultdict
 
+
+class Heatmap:
+  def __init__(self):
+        self.heatmap = defaultdict(int)
+  def increase(self, tran, env_index, **kwargs):
+    if "agent_pos" in tran:
+        x, y = map(int, tran["agent_pos"])
+        # convert (x,y) -> (row,col)=(y,x) for indexing
+        self.heatmap[(int(y), int(x))] += 1
 
 def train(make_agent, make_replay, make_env, make_stream, make_logger, args):
 
@@ -20,6 +31,10 @@ def train(make_agent, make_replay, make_env, make_stream, make_logger, args):
   episodes = collections.defaultdict(elements.Agg)
   policy_fps = elements.FPS()
   train_fps = elements.FPS()
+  
+  heatmap = Heatmap()
+  
+  
 
   batch_steps = args.batch_size * args.batch_length
   should_train = elements.when.Ratio(args.train_ratio / batch_steps)
@@ -60,6 +75,7 @@ def train(make_agent, make_replay, make_env, make_stream, make_logger, args):
   driver.on_step(lambda tran, _: policy_fps.step())
   driver.on_step(replay.add)
   driver.on_step(logfn)
+  driver.on_step(lambda tran, _: heatmap.increase(tran))
 
   stream_train = iter(agent.stream(make_stream(replay, 'train')))
   stream_report = iter(agent.stream(make_stream(replay, 'report')))
@@ -115,5 +131,7 @@ def train(make_agent, make_replay, make_env, make_stream, make_logger, args):
 
     if should_save(step):
       cp.save()
+      with open(logdir / f"heatmap_{int(step)}.pkl", "wb") as f:
+        pickle.dump(dict(heatmap.heatmap), f)
 
   logger.close()
