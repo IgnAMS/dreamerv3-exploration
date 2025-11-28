@@ -40,40 +40,83 @@ def load_heatmap_file(p):
     # expect dict {(r,c): count}
     return d
 
-def accumulate_heatmaps(files):
+def accumulate_heatmaps(files, assume_xy=False, grid_size=None):
     """
+    Carga dicts y devuelve acumulados normalizados.
+
+    Args:
+      files: lista de paths a heatmap_*.pkl (ordenados).
+      assume_xy: si True, interpreta las llaves del dict como (x,y) -> las convierte a (row=y, col=x).
+      grid_size: si no None, fuerza el tamaño (grid_size x grid_size).
     Returns:
-      steps: list of step numbers (from filenames)
-      accum_list: list of 2D numpy arrays with accumulated counts for each file
-      H,W: grid shape
+      steps, accum_list, H, W
     """
     dicts = []
     steps = []
     re_step = re.compile(r"heatmap_(\d+)\.pkl$")
-    # load all dicts
     for pth in files:
         m = re_step.search(pth)
         step = int(m.group(1)) if m else None
         d = load_heatmap_file(pth)
         dicts.append(d)
         steps.append(step)
-    # infer grid size
-    max_r = 0
-    max_c = 0
+
+    # si no hay dicts
+    if not dicts:
+        return steps, [], 0, 0
+
+    # recopilar todos los índices para inferir rango
+    all_coords = []
     for d in dicts:
         for (r, c) in d.keys():
-            if r > max_r: max_r = r
-            if c > max_c: max_c = c
-    H = max_r + 1
-    W = max_c + 1
-    # accumulate
+            if assume_xy:
+                x, y = r, c
+                row, col = int(y), int(x)
+            else:
+                row, col = int(r), int(c)
+            all_coords.append((row, col))
+
+    rows = [rc[0] for rc in all_coords]
+    cols = [rc[1] for rc in all_coords]
+
+    min_r = min(rows)
+    min_c = min(cols)
+    max_r = max(rows)
+    max_c = max(cols)
+
+    # Si el usuario fuerza grid_size, úsalo. Sino inferir del rango (normalizado)
+    if grid_size is not None:
+        H = grid_size
+        W = grid_size
+        # en este caso asumimos que el offset es 0..grid_size-1; pero si min_r>0,
+        # hacemos un shift compensatorio al mapear.
+    else:
+        H = max_r - min_r + 1
+        W = max_c - min_c + 1
+
+    # Acumular con shift (restar min_r/min_c)
     accum_list = []
     accum = np.zeros((H, W), dtype=float)
     for d in dicts:
         for (r, c), v in d.items():
-            accum[r, c] += v
+            if assume_xy:
+                x, y = r, c
+                row, col = int(y), int(x)
+            else:
+                row, col = int(r), int(c)
+            # shift to zero-based
+            rs = row - min_r
+            cs = col - min_c
+            # if a forced grid_size is given, we can optionally map coordinates into it
+            if 0 <= rs < H and 0 <= cs < W:
+                accum[rs, cs] += v
+            else:
+                # ignore out-of-range coords (print for debugging)
+                # print("coord out of inferred grid:", (row, col), "-> shifted", (rs, cs), " HxW", (H, W))
+                pass
         accum_list.append(accum.copy())
     return steps, accum_list, H, W
+
 
 def maybe_smooth(arr, sigma):
     if sigma and sigma > 0:
