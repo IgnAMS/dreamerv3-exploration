@@ -16,7 +16,7 @@ from PIL import Image
 
 class SimpleEmpty(embodied.Env):
     """
-    Wrapper similar a tu SimpleGrid pero que crea dinámicamente un EmptyFixedEnv
+    Wrapper similar a SimpleGrid pero que crea dinámicamente un EmptyFixedEnv
     con tamaño arbitrario y lo envuelve en FromGym.
 
     Ejemplo:

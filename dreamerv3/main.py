@@ -14,7 +14,7 @@ import embodied
 import numpy as np
 import portal
 import ruamel.yaml as yaml
-
+import minigrid
 
 def main(argv=None):
   from .agent import Agent
@@ -214,9 +214,6 @@ def make_env(config, index, **overrides):
   if suite == 'memmaze':
     from embodied.envs import from_gym
     import memory_maze  # noqa
-  if suite == 'minigrid':
-    from embodied.envs import from_gym
-    import minigrid
   ctor = {
       'dummy': 'embodied.envs.dummy:Dummy',
       'gym': 'embodied.envs.from_gym:FromGym',
@@ -234,7 +231,7 @@ def make_env(config, index, **overrides):
       'bsuite': 'embodied.envs.bsuite:BSuite',
       'memmaze': lambda task, **kw: from_gym.FromGym(
           f'MemoryMaze-{task}-v0', **kw),
-      'minigrid': 'embodied.envs.minigrid:SimpleGrid',
+      'minigrid': 'embodied.envs.new_minigrid:SimpleEmpty',
   }[suite]
   if isinstance(ctor, str):
     module, cls = ctor.split(':')
