@@ -109,7 +109,7 @@ def accumulate_heatmaps(files, assume_xy=False, grid_size=None):
             cs = col - min_c
             # if a forced grid_size is given, we can optionally map coordinates into it
             if 0 <= rs < H and 0 <= cs < W:
-                accum[rs, cs] += v
+                accum[rs, cs] = v
             else:
                 # ignore out-of-range coords (print for debugging)
                 # print("coord out of inferred grid:", (row, col), "-> shifted", (rs, cs), " HxW", (H, W))
@@ -120,12 +120,8 @@ def accumulate_heatmaps(files, assume_xy=False, grid_size=None):
 
 def maybe_smooth(arr, sigma):
     if sigma and sigma > 0:
-        try:
-            from scipy.ndimage import gaussian_filter
-            return gaussian_filter(arr, sigma=sigma)
-        except Exception:
-            print("scipy not available; skipping smoothing")
-            return arr
+        from scipy.ndimage import gaussian_filter
+        return gaussian_filter(arr, sigma=sigma)    
     return arr
 
 def make_animation(accum_list, steps, sample_frame=None, outpath=OUT_ANIM, cmap=CMAP, fps=FPS, smooth_sigma=SMOOTH):
