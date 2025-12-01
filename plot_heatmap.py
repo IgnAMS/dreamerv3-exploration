@@ -49,21 +49,19 @@ def accumulate_heatmaps(files, assume_xy=False, grid_size=None):
       assume_xy: si True, interpreta las llaves del dict como (x,y) -> las convierte a (row=y, col=x).
       grid_size: si no None, fuerza el tamaño (grid_size x grid_size).
     Returns:
-      steps, accum_list, H, W
+      accum_list, H, W
     """
     dicts = []
-    steps = []
     re_step = re.compile(r"heatmap_(\d+)\.pkl$")
     for pth in files:
         m = re_step.search(pth)
         step = int(m.group(1)) if m else None
         d = load_heatmap_file(pth)
         dicts.append(d)
-        steps.append(step)
 
     # si no hay dicts
     if not dicts:
-        return steps, [], 0, 0
+        return [], 0, 0
 
     # recopilar todos los índices para inferir rango
     all_coords = []
@@ -115,7 +113,7 @@ def accumulate_heatmaps(files, assume_xy=False, grid_size=None):
                 # print("coord out of inferred grid:", (row, col), "-> shifted", (rs, cs), " HxW", (H, W))
                 pass
         accum_list.append(accum.copy())
-    return steps, accum_list, H, W
+    return accum_list, H, W
 
 
 def maybe_smooth(arr, sigma):
@@ -124,7 +122,7 @@ def maybe_smooth(arr, sigma):
         return gaussian_filter(arr, sigma=sigma)    
     return arr
 
-def make_animation(accum_list, steps, sample_frame=None, outpath=OUT_ANIM, cmap=CMAP, fps=FPS, smooth_sigma=SMOOTH):
+def make_animation(accum_list, sample_frame=None, outpath=OUT_ANIM, cmap=CMAP, fps=FPS, smooth_sigma=SMOOTH):
     fig, ax = plt.subplots(figsize=(5,5))
     plt.tight_layout()
     fig.subplots_adjust(right=0.80)
@@ -138,12 +136,12 @@ def make_animation(accum_list, steps, sample_frame=None, outpath=OUT_ANIM, cmap=
         ax.imshow(sample_frame)
         im = ax.imshow(maybe_smooth(accum_list[0], smooth_sigma), cmap=cmap, alpha=0.6, vmin=0, vmax=vmax, origin="lower")
     cb = plt.colorbar(im, ax=ax, fraction=0.046, pad=0.04)
-    title = ax.set_title(f"step {steps[0]} (accum visits={accum_list[0].sum():.0f})")
+    title = ax.set_title(f"steps={accum_list[0].sum():.0f})")
 
     def update(i):
         data = maybe_smooth(accum_list[i], smooth_sigma)
         im.set_data(data)
-        title.set_text(f"step {steps[i]} (accum visits={accum_list[i].sum():.0f})")
+        title.set_text(f"steps={accum_list[i].sum():.0f})")
         return (im,)
 
     anim = animation.FuncAnimation(fig, update, frames=len(accum_list), blit=True, interval=1000/fps)
@@ -151,11 +149,8 @@ def make_animation(accum_list, steps, sample_frame=None, outpath=OUT_ANIM, cmap=
     # Save
     outpath = Path(outpath)
     if outpath.suffix == ".gif":
-        try:
-            anim.save(str(outpath), writer='pillow', fps=fps)
-            print(f"Saved GIF to {outpath}")
-        except Exception as e:
-            print("Could not save GIF:", e)
+        anim.save(str(outpath), writer='pillow', fps=fps)
+        print(f"Saved GIF to {outpath}")
     else:
         # try ffmpeg for mp4
         try:
@@ -172,7 +167,7 @@ def make_animation(accum_list, steps, sample_frame=None, outpath=OUT_ANIM, cmap=
                 print("Failed to save animation:", e, e2)
     plt.close(fig)
 
-def interactive_view(accum_list, steps, sample_frame=None, cmap=CMAP, smooth_sigma=SMOOTH):
+def interactive_view(accum_list, sample_frame=None, cmap=CMAP, smooth_sigma=SMOOTH):
     fig, ax = plt.subplots(figsize=(5,5))
     fig.subplots_adjust(right=0.80, bottom=0.15)
     vmax = max(a.max() for a in accum_list) or 1.0
@@ -181,7 +176,7 @@ def interactive_view(accum_list, steps, sample_frame=None, cmap=CMAP, smooth_sig
     else:
         ax.imshow(sample_frame)
         img = ax.imshow(maybe_smooth(accum_list[0], smooth_sigma), cmap=cmap, alpha=0.6, origin="lower", vmax=vmax)
-    title = ax.set_title(f"step {steps[0]} (visits={accum_list[0].sum():.0f})")
+    title = ax.set_title(f"step={accum_list[0].sum():.0f})")
     axcolor = 'lightgoldenrodyellow'
     axslider = plt.axes([0.15, 0.05, 0.7, 0.03], facecolor=axcolor)
     slider = Slider(axslider, 'frame', 0, len(accum_list)-1, valinit=0, valstep=1)
@@ -189,7 +184,7 @@ def interactive_view(accum_list, steps, sample_frame=None, cmap=CMAP, smooth_sig
     def update(val):
         i = int(val)
         img.set_data(maybe_smooth(accum_list[i], smooth_sigma))
-        title.set_text(f"step {steps[i]} (visits={accum_list[i].sum():.0f})")
+        title.set_text(f"step={accum_list[i].sum():.0f})")
         fig.canvas.draw_idle()
 
     slider.on_changed(update)
@@ -204,20 +199,13 @@ def main():
     steps, accum_list, H, W = accumulate_heatmaps(files)
     print(f"Grid size inferred: {H} x {W}, frames: {len(accum_list)}")
 
-    # try to find a sample frame to overlay (optional)
-    sample_frame = None
-    # look for 'first_frame.png' or an env render saved - adapt if you saved it elsewhere
-    candidate = LOGDIR / "first_frame_obs_completa.png"
-    if candidate.exists():
-        sample_frame = plt.imread(str(candidate))
-
     # generate animation file
     print("Generating animation...")
-    make_animation(accum_list, steps, sample_frame=sample_frame, outpath=OUT_ANIM, cmap=CMAP, fps=FPS, smooth_sigma=SMOOTH)
+    make_animation(accum_list, sample_frame=None, outpath=OUT_ANIM, cmap=CMAP, fps=FPS, smooth_sigma=SMOOTH)
 
     # show interactive viewer
     print("Opening interactive viewer (close the window to finish).")
-    interactive_view(accum_list, steps, sample_frame=sample_frame, cmap=CMAP, smooth_sigma=SMOOTH)
+    interactive_view(accum_list, sample_frame=None, cmap=CMAP, smooth_sigma=SMOOTH)
 
 if __name__ == "__main__":
     main()
