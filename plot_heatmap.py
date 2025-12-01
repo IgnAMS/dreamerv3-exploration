@@ -18,7 +18,7 @@ from matplotlib import animation
 from matplotlib.widgets import Slider
 
 # ------------ CONFIG ------------
-LOGDIR = Path.home() / "logdir" / "dreamer" / "minigrid8" / "size12m" / "01"
+LOGDIR = Path.home() / "logdir" / "dreamer" / "minigrid10" / "size12m" / "02"
 OUT_ANIM = Path("exploration_gpu.gif") 
 CMAP = "inferno"
 SMOOTH = 0.0   # gaussian sigma (0 = no smoothing). Requiere scipy.ndimage if >0
