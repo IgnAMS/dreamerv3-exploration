@@ -69,7 +69,7 @@ def request_frame(env_wrapper, tile_size=None):
 
 def main():
     # Configurables
-    GRID_SIZE = 32             # prueba 8,16,32,64...
+    GRID_SIZE = 8             # prueba 8,16,32,64...
     PIXEL_SIZE = (160, 160)    # tamaño resultante de la imagen que verás (height,width)
     TILE_SIZE = 8              # tamaño del tile en px para el renderer; mayor => ventana más grande
     FULL_OBS = True
