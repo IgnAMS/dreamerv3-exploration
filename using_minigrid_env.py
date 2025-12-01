@@ -14,7 +14,7 @@ KEY_TO_ACTION = {
     "space": 3,
     "b": 4,
 }
-raw_env = gym.make("MiniGrid-Empty-16x16-v0", render_mode="rgb_array")
+raw_env = gym.make("MiniGrid-Empty-32x32-v0", render_mode="rgb_array")
 obs, _ = raw_env.reset()
 print(obs['image'].shape)
 # full_obs_env = FullyObsWrapper(raw_env)

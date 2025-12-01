@@ -14,6 +14,7 @@ import matplotlib.pyplot as plt
 
 # Import your SimpleGrid and Driver
 from embodied.envs.minigrid import SimpleGrid
+from embodied.envs.new_minigrid import SimpleEmpty
 from embodied.core.driver import Driver
 
 # --- Heatmap class you provided ---
@@ -31,21 +32,21 @@ def plot_heatmap_from_counts(counts_dict, sample_frame=None, smooth_sigma=1.0, c
     if len(counts_dict) == 0:
         print("No visits recorded.")
         return
-    rows = [k[0] for k in counts_dict.keys()]
-    cols = [k[1] for k in counts_dict.keys()]
-    H = max(rows) + 1
-    W = max(cols) + 1
+    rows = set([k[0] for k in counts_dict.keys()])
+    cols = set([k[1] for k in counts_dict.keys()])
+    H = max(rows)
+    W = max(cols)
     counts = np.zeros((H, W), dtype=float)
     for (r, c), v in counts_dict.items():
-        counts[r, c] = v
-    try:
-        from scipy.ndimage import gaussian_filter
-        if smooth_sigma > 0:
-            counts = gaussian_filter(counts, sigma=smooth_sigma)
-    except Exception:
-        pass
+        counts[r - 1, c - 1] = v
+    print(counts)
+    from scipy.ndimage import gaussian_filter
+    if smooth_sigma > 0:
+        counts = gaussian_filter(counts, sigma=smooth_sigma)
+    
     maxv = counts.max()
-    counts_norm = counts / maxv if maxv > 0 else counts
+    counts_norm = counts / maxv
+    print(counts_norm)
     plt.figure(figsize=(6, 6))
     if sample_frame is None:
         plt.imshow(counts_norm, cmap=cmap)
@@ -86,18 +87,17 @@ class RandAgent:
 
 # ----------------- main -----------------
 def main():
-    GRID_TASK = "5x5"
+    GRID_TASK = "32x32"
     PIXEL_SIZE = (80, 80)
     TILE_SIZE = 16
-    EPISODES = 60
-    STEPS_PER_CALL = 10   # driver(policy, steps=STEPS_PER_CALL)
+    EPISODES = 100
+    STEPS_PER_CALL = 10
     PARALLEL = False
 
     print("Creating envs factory list (fns)...")
-    # fns is a list of callables making envs; here we create a single env factory
     def make_env_fn(idx=0):
-        return SimpleGrid(task=GRID_TASK, size=PIXEL_SIZE, rgb_img_obs='full', tile_size=TILE_SIZE)
-    fns = [make_env_fn]  # single env. If you want multiple envs, put more factories here.
+        return SimpleEmpty(task=GRID_TASK, size=PIXEL_SIZE, rgb_img_obs='full', tile_size=TILE_SIZE)
+    fns = [make_env_fn]
 
     print("Instancing Driver...")
     driver = Driver(fns, parallel=PARALLEL)
@@ -111,8 +111,6 @@ def main():
 
     # heatmap
     heat = Heatmap()
-
-    # Try to capture a sample frame for overlay
     sample_frame = None
 
     # Register callbacks on driver
@@ -127,9 +125,7 @@ def main():
             episode_counter["n"] += 1
     driver.on_step(episode_inc)
 
-    # replay.add / logfn etc omitted — we only want heatmap
     # Register heatmap callback using your Heatmap.increase
-    # Note: Heatmap.increase expects (tran, env_index, **kwargs)
     driver.on_step(lambda tran, worker: heat.increase(tran, worker))
 
     # Reset driver with initial policy state (as in train)
@@ -142,11 +138,10 @@ def main():
     while episode_counter["n"] < EPISODES:
         # call driver with policy; driver will call our callbacks
         driver(policy_callable, steps=STEPS_PER_CALL)
-        # safety guard: avoid infinite loop
         if step_counter["n"] > EPISODES * 1000:
             print("Too many steps, aborting.")
             break
-
+        
     elapsed = time.time() - start_time
     print(f"Finished. Episodes: {episode_counter['n']}, Steps: {step_counter['n']}, Time: {elapsed:.2f}s")
 
@@ -155,7 +150,6 @@ def main():
     # try to get a render frame from one of the envs
     try:
         env0 = driver.envs[0]
-        # try env0.render
         try:
             frame = env0.render()
         except TypeError:
@@ -164,6 +158,7 @@ def main():
         frame = None
 
     print("Total visits recorded:", sum(heat.heatmap.values()))
+    print(heat.heatmap)
     plot_heatmap_from_counts(heat.heatmap, sample_frame=frame, smooth_sigma=1.0, cmap="hot", alpha=0.6, show=True, savepath="heatmap_overlay.png")
     print("Saved heatmap_overlay.png")
 

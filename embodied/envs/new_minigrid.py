@@ -1,38 +1,66 @@
+# embodied/envs/minigrid_empty.py
+import functools
+from typing import Optional, Tuple
+
 import elements
 import embodied
 import numpy as np
-import minigrid
-from minigrid.minigrid_env import MiniGridEnv
-from minigrid.core.mission import MissionSpace
-from minigrid.wrappers import FullyObsWrapper, RGBImgPartialObsWrapper, RGBImgObsWrapper
-from . import from_gym
 import gymnasium as gym
 
+from minigrid.envs.empty import EmptyEnv
+
+from minigrid.wrappers import FullyObsWrapper, RGBImgPartialObsWrapper, RGBImgObsWrapper
+from . import from_gym
 from PIL import Image
 
-# no forzar import global de minigrid aquí (puede no estar en CI)
-# we'll import the wrappers lazily below when needed
 
+class SimpleEmpty(embodied.Env):
+    """
+    Wrapper similar a tu SimpleGrid pero que crea dinámicamente un EmptyFixedEnv
+    con tamaño arbitrario y lo envuelve en FromGym.
 
-class SimpleGrid(embodied.Env):
+    Ejemplo:
+      env = SimpleEmpty(task=8, size=(128,128), full_obs=True, rgb_img_obs='full')
+    """
+
     def __init__(self,
-               task,
-               size=(80, 80),
-               resize='pillow',
-               full_obs=True,
-               rgb_img_obs='full',
-               tile_size=None,
-               render_mode='rgb_array',
-               **kwargs):
+                 task,                    # tamaño como int o string (p.ej. '32' o 32)
+                 size: Tuple[int, int] = (80, 80),
+                 resize: str = 'pillow',
+                 full_obs: bool = True,
+                 rgb_img_obs: str = 'full',
+                 tile_size: Optional[int] = None,
+                 render_mode: str = 'rgb_array',
+                 agent_start_pos: Tuple[int, int] = (1, 1),
+                 agent_start_dir: int = 0,
+                 max_steps: Optional[int] = None,
+                 **kwargs):
         assert resize in ('opencv', 'pillow'), resize
-        env_id = f"MiniGrid-Empty-{task}-v0"        
-        raw = gym.make(env_id, render_mode=render_mode, **kwargs)
+        # interpret task as integer size if possible
+        try:
+            grid_size = int(task)
+        except Exception:
+            # if task is like "5x5" extract leading number
+            if isinstance(task, str) and 'x' in task:
+                grid_size = int(task.split('x', 1)[1])
+            else:
+                raise ValueError("task debe ser un int o 'NxN' (ej. '16x16')")
 
+        # build the raw env (our EmptyFixedEnv)
+        raw = EmptyEnv(
+            size=grid_size,
+            agent_start_pos=agent_start_pos,
+            agent_start_dir=agent_start_dir,
+            max_steps=max_steps,
+            render_mode=render_mode
+        )
+
+        # apply wrappers for observations if requested
         if full_obs:
             raw = FullyObsWrapper(raw)
 
         if rgb_img_obs:
-            # normalizar valor
+            # normalize option
             if rgb_img_obs is True:
                 rgb_img_obs = 'partial'
             if isinstance(rgb_img_obs, str) and rgb_img_obs.lower() == 'full':
@@ -40,11 +68,12 @@ class SimpleGrid(embodied.Env):
             else:
                 raw = RGBImgPartialObsWrapper(raw)
 
+        # wrap with your FromGym so rest of pipeline sees same interface
         self._from_gym = from_gym.FromGym(raw, obs_key='image', act_key='action')
+        # target image size for resizing in _ensure_image (height, width)
         self.size = tuple(size)
         self.resize = resize
         self.tile_size = tile_size
-
         self._renderer = self._get_underlying_renderer(self._from_gym)
 
     @property
@@ -52,12 +81,13 @@ class SimpleGrid(embodied.Env):
         return self._from_gym
 
     def _get_core_env(self):
-        """Descender wrappers hasta encontrar el core que expone agent_pos/agent_dir/grid."""
-        u = self._from_gym
+        """Descender env wrappers hasta llegar al core environment (EmptyFixedEnv)."""
+        u = getattr(self._from_gym, "env", self._from_gym)
         for _ in range(10):
-            if hasattr(u, "agent_pos") and hasattr(u, "agent_dir"):
+            if hasattr(u, "agent_pos") and hasattr(u, "agent_dir") and hasattr(u, "grid"):
                 return u
-            next_u = getattr(u, "env", None)
+            # try common nested names
+            next_u = getattr(u, "env", None) or getattr(u, "_env", None) or getattr(u, "inner_env", None)
             if next_u is None or next_u is u:
                 break
             u = next_u
@@ -65,41 +95,34 @@ class SimpleGrid(embodied.Env):
 
     @property
     def info(self):
-        """
-        Diccionario con metadatos útiles del entorno:
-          - grid_size / width / height (cuando se puede)
-          - agent_pos (row, col) y agent_dir si están disponibles
-          - has_renderer, tile_size
-        """
+        """Info tipada (numpy arrays) para que el driver pueda apilar y luego usar."""
         out = {}
         core = self._get_core_env()
-        # grid size
         out["grid_size"] = np.array([int(core.height), int(core.width)], dtype=np.int32)
-
-        # agent position & dir (normalize to (row, col))
         pos = core.agent_pos
         row, col = int(pos[0]), int(pos[1])
         out["agent_pos"] = np.array([row, col], dtype=np.int32)
         out["agent_dir"] = core.agent_dir
+        out["agent_dir"] = core.agent_dir
         # out["mission"] = core["mission"] 
-        
-        # renderer availability & tile_size
-        out["has_renderer"] = np.array([1 if self._renderer is not None else 0], dtype=np.int8)
-        # out["tile_size"] = np.array([self.tile_size], dtype=np.int32)
+
+        # has_renderer and tile_size
+        out["has_renderer"] = np.asarray([1 if self._renderer is not None else 0], dtype=np.int8)
+        # out["tile_size"] = np.asarray([int(self.tile_size) if self.tile_size is not None else 0], dtype=np.int32)
 
         return out
-    
+
     @property
     def obs_space(self):
         # Copiamos el obs_space declarado por FromGym y forzamos image a uint8 (H,W,3)
         spaces = self._from_gym.obs_space.copy()
         spaces['image'] = elements.Space(np.uint8, (*self.size, 3))
         return spaces
-    
+
     @property
     def act_space(self):
         return self._from_gym.act_space
-    
+
     def reset(self, **kwargs):
         result = self._from_gym.reset(**kwargs)
         obs = self._ensure_image(result)
@@ -129,7 +152,7 @@ class SimpleGrid(embodied.Env):
             if hasattr(underlying, "render"):
                 return underlying
             # bajar un nivel
-            next_u = getattr(underlying, "env", None)
+            next_u = getattr(underlying, "env", None) or getattr(underlying, "inner_env", None) or getattr(underlying, "_env", None)
             if next_u is None or next_u is underlying:
                 break
             underlying = next_u
