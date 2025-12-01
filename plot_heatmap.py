@@ -196,7 +196,7 @@ def main():
         print("No heatmap files found in", LOGDIR)
         return
     print("Found files:", files)
-    steps, accum_list, H, W = accumulate_heatmaps(files)
+    accum_list, H, W = accumulate_heatmaps(files)
     print(f"Grid size inferred: {H} x {W}, frames: {len(accum_list)}")
 
     # generate animation file
