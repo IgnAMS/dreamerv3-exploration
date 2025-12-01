@@ -1,11 +1,3 @@
-#!/usr/bin/env python3
-"""
-Carga heatmap_*.pkl de un logdir y genera:
- - una animación (GIF/MP4) de la exploración acumulada
- - una ventana interactiva con slider para inspeccionar cada snapshot
-
-Requisitos: numpy, matplotlib, pillow (para GIF) y opcionalmente ffmpeg (para MP4).
-"""
 import os
 import pickle
 import glob
@@ -19,7 +11,7 @@ from matplotlib.widgets import Slider
 
 # ------------ CONFIG ------------
 LOGDIR = Path.home() / "logdir" / "dreamer" / "minigrid10" / "size12m" / "03"
-OUT_ANIM = Path("exploration_gpu_40k.gif") 
+OUT_ANIM = Path("exploration_gpu_60k.gif") 
 CMAP = "inferno"
 SMOOTH = 0.0   # gaussian sigma (0 = no smoothing). Requiere scipy.ndimage if >0
 FPS = 4
@@ -127,21 +119,26 @@ def make_animation(accum_list, sample_frame=None, outpath=OUT_ANIM, cmap=CMAP, f
     plt.tight_layout()
     fig.subplots_adjust(right=0.80)
     # choose vmax for color scaling (global max across frames)
-    vmax = max(a.max() for a in accum_list) or 1.0
+    # vmax = max(a.max() for a in accum_list) or 1.0
+    first_max = accum_list[0].max()
     im = None
 
     if sample_frame is None:
-        im = ax.imshow(maybe_smooth(accum_list[0], smooth_sigma), cmap=cmap, vmin=0, vmax=vmax, origin="lower")
+        im = ax.imshow(maybe_smooth(accum_list[0], smooth_sigma), cmap=cmap, vmin=0, vmax=first_max, origin="lower")
     else:
         ax.imshow(sample_frame)
-        im = ax.imshow(maybe_smooth(accum_list[0], smooth_sigma), cmap=cmap, alpha=0.6, vmin=0, vmax=vmax, origin="lower")
+        im = ax.imshow(maybe_smooth(accum_list[0], smooth_sigma), cmap=cmap, alpha=0.6, vmin=0, vmax=first_max, origin="lower")
     cb = plt.colorbar(im, ax=ax, fraction=0.046, pad=0.04)
-    title = ax.set_title(f"steps={accum_list[0].sum():.0f})")
+    title = ax.set_title(f"steps={accum_list[0].sum():.0f}")
 
     def update(i):
         data = maybe_smooth(accum_list[i], smooth_sigma)
         im.set_data(data)
-        title.set_text(f"steps={accum_list[i].sum():.0f})")
+        
+        frame_max = data.max() or 1.0
+        im.set_clim(0, frame_max)
+        
+        title.set_text(f"steps={accum_list[i].sum():.0f}")
         return (im,)
 
     anim = animation.FuncAnimation(fig, update, frames=len(accum_list), blit=True, interval=1000/fps)
