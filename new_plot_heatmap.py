@@ -114,74 +114,99 @@ def maybe_smooth(arr, sigma):
         return gaussian_filter(arr, sigma=sigma)    
     return arr
 
-def make_animation(accum_list, sample_frame=None, outpath=OUT_ANIM, cmap=CMAP, fps=FPS, smooth_sigma=SMOOTH):
+# --- make_animation (log1p por-frame y colorbar dinámico) ---
+def make_animation(accum_list, sample_frame=None, outpath=Path("out.gif"),
+                   cmap="inferno", fps=4, smooth_sigma=0.0, use_log=True, alpha=0.6):
+    if not len(accum_list):
+        print("No frames to animate")
+        return
+
     fig, ax = plt.subplots(figsize=(5,5))
     plt.tight_layout()
     fig.subplots_adjust(right=0.80)
-    # choose vmax for color scaling (global max across frames)
-    # vmax = max(a.max() for a in accum_list) or 1.0
-    first_max = accum_list[0].max()
+
+    first = maybe_smooth(accum_list[0], smooth_sigma)
+    first_plot = np.log1p(first) if use_log else first
     im = None
 
     if sample_frame is None:
-        im = ax.imshow(maybe_smooth(accum_list[0], smooth_sigma), cmap=cmap, vmin=0, vmax=first_max, origin="lower")
+        im = ax.imshow(first_plot, cmap=cmap, vmin=0, vmax=float(first_plot.max() or 1.0), origin="lower")
     else:
         ax.imshow(sample_frame)
-        im = ax.imshow(maybe_smooth(accum_list[0], smooth_sigma), cmap=cmap, alpha=0.6, vmin=0, vmax=first_max, origin="lower")
+        im = ax.imshow(first_plot, cmap=cmap, alpha=alpha, vmin=0, vmax=float(first_plot.max() or 1.0), origin="lower")
+
     cb = plt.colorbar(im, ax=ax, fraction=0.046, pad=0.04)
-    title = ax.set_title(f"steps={accum_list[0].sum():.0f}")
+    cb.set_label("log1p(visits)" if use_log else "visits")
+    title = ax.set_title(f"steps={int(accum_list[0].sum()):,}")
 
     def update(i):
         data = maybe_smooth(accum_list[i], smooth_sigma)
-        im.set_data(data)
-        
-        frame_max = data.max() or 1.0
+        plot_data = np.log1p(data) if use_log else data
+        im.set_data(plot_data)
+
+        # escala por frame (usar máximo del frame actual)
+        frame_max = float(plot_data.max() or 1.0)
         im.set_clim(0, frame_max)
-        
-        title.set_text(f"steps={accum_list[i].sum():.0f}")
+        cb.update_normal(im)
+
+        title.set_text(f"steps={int(accum_list[i].sum()):,}")
         return (im,)
 
-    anim = animation.FuncAnimation(fig, update, frames=len(accum_list), blit=True, interval=1000/fps)
+    anim = animation.FuncAnimation(fig, update, frames=len(accum_list),
+                                   blit=True, interval=1000/fps)
 
-    # Save
     outpath = Path(outpath)
     if outpath.suffix == ".gif":
         anim.save(str(outpath), writer='pillow', fps=fps)
         print(f"Saved GIF to {outpath}")
     else:
-        # try ffmpeg for mp4
         try:
             Writer = animation.writers['ffmpeg']
             writer = Writer(fps=fps, metadata=dict(artist='me'), bitrate=1800)
             anim.save(str(outpath), writer=writer)
             print(f"Saved MP4 to {outpath}")
-        except Exception as e:
-            print("Could not save MP4 (ffmpeg missing?). Trying GIF fallback.")
-            try:
-                anim.save(str(outpath.with_suffix(".gif")), writer='pillow', fps=fps)
-                print("Saved GIF fallback")
-            except Exception as e2:
-                print("Failed to save animation:", e, e2)
+        except Exception:
+            anim.save(str(outpath.with_suffix(".gif")), writer='pillow', fps=fps)
+            print("Saved GIF fallback")
     plt.close(fig)
 
-def interactive_view(accum_list, sample_frame=None, cmap=CMAP, smooth_sigma=SMOOTH):
-    fig, ax = plt.subplots(figsize=(5,5))
+# --- interactive_view corregido (actualiza clim y colorbar en slider) ---
+def interactive_view(accum_list, sample_frame=None, cmap="inferno", smooth_sigma=0.0, use_log=True, alpha=0.6):
+    if not len(accum_list):
+        print("No frames to show")
+        return
+
+    fig, ax = plt.subplots(figsize=(6,6))
     fig.subplots_adjust(right=0.80, bottom=0.15)
-    vmax = max(a.max() for a in accum_list) or 1.0
+
+    first = maybe_smooth(accum_list[0], smooth_sigma)
+    first_plot = np.log1p(first) if use_log else first
     if sample_frame is None:
-        img = ax.imshow(maybe_smooth(accum_list[0], smooth_sigma), cmap=cmap, origin="lower", vmax=vmax)
+        img = ax.imshow(first_plot, cmap=cmap, origin="lower", vmax=float(first_plot.max() or 1.0))
     else:
         ax.imshow(sample_frame)
-        img = ax.imshow(maybe_smooth(accum_list[0], smooth_sigma), cmap=cmap, alpha=0.6, origin="lower", vmax=vmax)
-    title = ax.set_title(f"step={accum_list[0].sum():.0f})")
+        img = ax.imshow(first_plot, cmap=cmap, alpha=alpha, origin="lower", vmax=float(first_plot.max() or 1.0))
+
+    cb = plt.colorbar(img, ax=ax, fraction=0.046, pad=0.04)
+    cb.set_label("log1p(visits)" if use_log else "visits")
+    title = ax.set_title(f"step={int(accum_list[0].sum()):,}")
+
     axcolor = 'lightgoldenrodyellow'
     axslider = plt.axes([0.15, 0.05, 0.7, 0.03], facecolor=axcolor)
     slider = Slider(axslider, 'frame', 0, len(accum_list)-1, valinit=0, valstep=1)
 
     def update(val):
         i = int(val)
-        img.set_data(maybe_smooth(accum_list[i], smooth_sigma))
-        title.set_text(f"step={accum_list[i].sum():.0f})")
+        data = maybe_smooth(accum_list[i], smooth_sigma)
+        plot_data = np.log1p(data) if use_log else data
+        img.set_data(plot_data)
+
+        # actualizar clim y colorbar
+        vmax = float(plot_data.max() or 1.0)
+        img.set_clim(0, vmax)
+        cb.update_normal(img)
+
+        title.set_text(f"step={int(accum_list[i].sum()):,}")
         fig.canvas.draw_idle()
 
     slider.on_changed(update)
@@ -198,7 +223,7 @@ def main():
 
     # generate animation file
     print("Generating animation...")
-    make_animation(accum_list, sample_frame=None, outpath=OUT_ANIM, cmap=CMAP, fps=FPS, smooth_sigma=SMOOTH)
+    make_animation(accum_list, sample_frame=None, outpath=OUT_ANIM, cmap=CMAP, fps=FPS, smooth_sigma=SMOOTH, use_log=False)
 
     # show interactive viewer
     print("Opening interactive viewer (close the window to finish).")
