@@ -201,8 +201,8 @@ def main():
     make_animation(accum_list, sample_frame=None, outpath=OUT_ANIM, cmap=CMAP, fps=FPS, smooth_sigma=SMOOTH)
 
     # show interactive viewer
-    print("Opening interactive viewer (close the window to finish).")
-    interactive_view(accum_list, sample_frame=None, cmap=CMAP, smooth_sigma=SMOOTH)
+    # print("Opening interactive viewer (close the window to finish).")
+    # interactive_view(accum_list, sample_frame=None, cmap=CMAP, smooth_sigma=SMOOTH)
 
 if __name__ == "__main__":
     main()
