@@ -118,25 +118,33 @@ def make_animation(accum_list, sample_frame=None, outpath=OUT_ANIM, cmap=CMAP, f
     fig, ax = plt.subplots(figsize=(5,5))
     plt.tight_layout()
     fig.subplots_adjust(right=0.80)
+
     # choose vmax for color scaling (global max across frames)
     # vmax = max(a.max() for a in accum_list) or 1.0
-    first_max = accum_list[0].max()
+    first = maybe_smooth(accum_list[0], smooth_sigma)
+    first_log = np.log1p(first)
+    
     im = None
 
     if sample_frame is None:
-        im = ax.imshow(maybe_smooth(accum_list[0], smooth_sigma), cmap=cmap, vmin=0, vmax=first_max, origin="lower")
+        im = ax.imshow(first_log, cmap=cmap, vmin=0, vmax=first_log.max() or 1.0, origin="lower")
     else:
         ax.imshow(sample_frame)
-        im = ax.imshow(maybe_smooth(accum_list[0], smooth_sigma), cmap=cmap, alpha=0.6, vmin=0, vmax=first_max, origin="lower")
+        im = ax.imshow(first_log, cmap=cmap, alpha=0.6, vmin=0, vmax=first_log.max() or 1.0, origin="lower")
+    
     cb = plt.colorbar(im, ax=ax, fraction=0.046, pad=0.04)
+    cb.set_label("log1p(visits)")
     title = ax.set_title(f"steps={accum_list[0].sum():.0f}")
 
     def update(i):
         data = maybe_smooth(accum_list[i], smooth_sigma)
-        im.set_data(data)
+        log_data = np.log1p(data)
+        im.set_data(log_data)
         
-        frame_max = data.max() or 1.0
+        frame_max = float(log_data.max() or 1.0)
         im.set_clim(0, frame_max)
+        
+        cb.update_normal(im)
         
         title.set_text(f"steps={accum_list[i].sum():.0f}")
         return (im,)
@@ -167,12 +175,18 @@ def make_animation(accum_list, sample_frame=None, outpath=OUT_ANIM, cmap=CMAP, f
 def interactive_view(accum_list, sample_frame=None, cmap=CMAP, smooth_sigma=SMOOTH):
     fig, ax = plt.subplots(figsize=(5,5))
     fig.subplots_adjust(right=0.80, bottom=0.15)
-    vmax = max(a.max() for a in accum_list) or 1.0
+    first = maybe_smooth(accum_list[0], smooth_sigma)
+    first_log = np.log1p(first)
+    
     if sample_frame is None:
-        img = ax.imshow(maybe_smooth(accum_list[0], smooth_sigma), cmap=cmap, origin="lower", vmax=vmax)
+        img = ax.imshow(first_log, cmap=cmap, origin="lower", vmax=first_log.max() or 1.0)
     else:
         ax.imshow(sample_frame)
-        img = ax.imshow(maybe_smooth(accum_list[0], smooth_sigma), cmap=cmap, alpha=0.6, origin="lower", vmax=vmax)
+        img = ax.imshow(first_log, cmap=cmap, alpha=0.6, origin="lower", vmax=first_log.max() or 1.0)
+    
+    cb = plt.colorbar(img, ax=ax, fraction=0.046, pad=0.04)
+    cb.set_label("log1p(visits)")
+    
     title = ax.set_title(f"step={accum_list[0].sum():.0f})")
     axcolor = 'lightgoldenrodyellow'
     axslider = plt.axes([0.15, 0.05, 0.7, 0.03], facecolor=axcolor)
@@ -180,7 +194,14 @@ def interactive_view(accum_list, sample_frame=None, cmap=CMAP, smooth_sigma=SMOO
 
     def update(val):
         i = int(val)
-        img.set_data(maybe_smooth(accum_list[i], smooth_sigma))
+        data = maybe_smooth(accum_list[i], smooth_sigma)
+        log_data = np.log1p(data) 
+        img.set_data(log_data)
+        
+        vmax = float(log_data.max() or 1.0)
+        img.set_clim(0, vmax)
+        cb.update_normal(img)
+
         title.set_text(f"step={accum_list[i].sum():.0f})")
         fig.canvas.draw_idle()
 
