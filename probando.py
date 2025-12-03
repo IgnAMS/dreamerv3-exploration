@@ -18,7 +18,7 @@ from pathlib import Path
 # Import your wrapper (ajusta ruta si lo guardaste en otro módulo)
 # from embodied.envs.minigrid_empty import SimpleEmpty
 # Si tu archivo se llama diferente, ajusta la import.
-from embodied.envs.new_minigrid import SimpleEmpty
+from embodied.envs.new_minigrid import SimpleEmpty, MiddleGoal
 
 # key->action mapping (MiniGrid classic)
 KEY_TO_ACTION = {
@@ -69,7 +69,7 @@ def request_frame(env_wrapper, tile_size=None):
 
 def main():
     # Configurables
-    GRID_SIZE = 8             # prueba 8,16,32,64...
+    GRID_SIZE = 10             # prueba 8,16,32,64...
     PIXEL_SIZE = (160, 160)    # tamaño resultante de la imagen que verás (height,width)
     TILE_SIZE = 8              # tamaño del tile en px para el renderer; mayor => ventana más grande
     FULL_OBS = True
@@ -77,7 +77,7 @@ def main():
     RENDER_MODE = 'rgb_array'
 
     print("Creando env...")
-    env = SimpleEmpty(task=GRID_SIZE,
+    env = MiddleGoal(task=GRID_SIZE,
                       size=PIXEL_SIZE,
                       resize='pillow',
                       full_obs=FULL_OBS,
