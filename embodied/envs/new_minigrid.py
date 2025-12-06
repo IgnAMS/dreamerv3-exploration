@@ -38,6 +38,7 @@ class SimpleEmpty(embodied.Env):
         agent_start_pos: Tuple[int, int] = (1, 1),
         agent_start_dir: int = 0,
         max_steps: Optional[int] = None,
+        make_agent = None,
         **kwargs
     ):
         assert resize in ('opencv', 'pillow'), resize
@@ -47,18 +48,30 @@ class SimpleEmpty(embodied.Env):
         except Exception:
             # if task is like "5x5" extract leading number
             if isinstance(task, str) and 'x' in task:
-                grid_size = int(task.split('x', 1)[1])
+                grid_size = task.split("x")
             else:
                 raise ValueError("task debe ser un int o 'NxN' (ej. '16x16')")
 
         # build the raw env (our EmptyFixedEnv)
-        raw = EmptyEnv(
-            size=grid_size,
-            agent_start_pos=agent_start_pos,
-            agent_start_dir=agent_start_dir,
-            max_steps=max_steps,
-            render_mode=render_mode
-        )
+        if make_agent:
+            print()
+            raw = make_agent(
+                height=int(grid_size[0]),
+                width=int(grid_size[1]),
+                agent_start_pos=agent_start_pos,
+                agent_start_dir=agent_start_dir,
+                max_steps=max_steps,
+                render_mode=render_mode    
+            )
+        else:
+            print("Make agent no existe")
+            raw = EmptyEnv(
+                size=grid_size,
+                agent_start_pos=agent_start_pos,
+                agent_start_dir=agent_start_dir,
+                max_steps=max_steps,
+                render_mode=render_mode    
+            )
 
         # apply wrappers for observations if requested
         if full_obs:
@@ -434,3 +447,23 @@ class MiddleGoal(embodied.Env):
             return np.array(img)
         else:
             raise NotImplementedError(method)
+
+
+class CookiePedro(SimpleEmpty):
+    def __init__(**kwargs):
+        from cookie_env import CookieEnv
+        SimpleEmpty(
+            task=GRID_SIZE,
+            size=PIXEL_SIZE,
+            resize='pillow',
+            full_obs=FULL_OBS,
+            rgb_img_obs=RGB_IMG,
+            tile_size=TILE_SIZE,
+            render_mode=RENDER_MODE,
+            agent_start_pos=(14, 14),
+            make_agent=CookieEnv # RawMiddlePoint
+        )
+        super.__init__(
+            **kwargs,
+            make_agent=CookieEnv
+        )
