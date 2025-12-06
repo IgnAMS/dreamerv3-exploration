@@ -30,5 +30,5 @@ export TF_CPP_MIN_LOG_LEVEL=3
 # --- Ejecución del Script de PPO ---
 # Ejecutamos directamente el script de entrenamiento PPO.
 # Asumo que el script 'train_ppo.py' está en la ruta 'pop/train_ppo.py'
-echo "Ejecutando: python pop/train_ppo.py"
-python pop/train_ppo.py
+echo "Ejecutando: python ppo/train_ppo.py"
+python ppo/train_ppo.py
