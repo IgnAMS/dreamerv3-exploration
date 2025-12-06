@@ -18,9 +18,24 @@ from pathlib import Path
 # Import your wrapper (ajusta ruta si lo guardaste en otro módulo)
 # from embodied.envs.minigrid_empty import SimpleEmpty
 # Si tu archivo se llama diferente, ajusta la import.
-from embodied.envs.new_minigrid import SimpleEmpty, MiddleGoal, RawMiddlePoint
+from embodied.envs.new_minigrid import SimpleEmpty, MiddleGoal, RawMiddlePoint, CookiePedro
 from cookie_env.env import CookieEnv
 
+# key->action mapping (MiniGrid classic)
+KEY_TO_ACTION = {
+    # Movimiento clásico
+    pygame.K_LEFT: 0,      # turn left
+    pygame.K_RIGHT: 1,     # turn right
+    pygame.K_UP: 2,        # forward
+    pygame.K_TAB: 3,       # pick up
+    pygame.K_PAGEUP: 3,    # pick up (alternative)
+    pygame.K_LSHIFT: 4,    # drop
+    pygame.K_PAGEDOWN: 4,  # drop (alternative)
+    pygame.K_SPACE: 5,     # toggle
+    pygame.K_RETURN: 6,    # done
+}
+
+"""
 # key->action mapping (MiniGrid classic)
 KEY_TO_ACTION = {
     pygame.K_LEFT: 0,   # turn left
@@ -29,6 +44,7 @@ KEY_TO_ACTION = {
     pygame.K_SPACE: 3,  # toggle / interact
     pygame.K_b: 4,      # drop
 }
+"""
 
 
 def request_frame(env_wrapper, tile_size=None):
@@ -78,6 +94,7 @@ def main():
     RENDER_MODE = 'rgb_array'
 
     print("Creando env...")
+    """
     env = SimpleEmpty(
         task=GRID_SIZE,
         size=PIXEL_SIZE,
@@ -88,6 +105,17 @@ def main():
         render_mode=RENDER_MODE,
         agent_start_pos=(14, 14),
         make_agent=CookieEnv # RawMiddlePoint
+    )
+    """
+    env = CookiePedro(
+        task=GRID_SIZE,
+        size=PIXEL_SIZE,
+        resize='pillow',
+        full_obs=FULL_OBS,
+        rgb_img_obs=RGB_IMG,
+        tile_size=TILE_SIZE,
+        render_mode=RENDER_MODE,
+        agent_start_pos=(14, 14),
     )
 
     # reset and get starting obs

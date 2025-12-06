@@ -450,20 +450,28 @@ class MiddleGoal(embodied.Env):
 
 
 class CookiePedro(SimpleEmpty):
-    def __init__(**kwargs):
-        from cookie_env import CookieEnv
-        SimpleEmpty(
-            task=GRID_SIZE,
-            size=PIXEL_SIZE,
-            resize='pillow',
-            full_obs=FULL_OBS,
-            rgb_img_obs=RGB_IMG,
-            tile_size=TILE_SIZE,
-            render_mode=RENDER_MODE,
+    def __init__(
+        self,
+        task=None,
+        size=None,
+        resize=None,
+        full_obs=None,
+        rgb_img_obs=None,
+        tile_size=None,
+        render_mode=None,    
+        **kwargs
+    ):
+        from cookie_env.env import CookieEnv
+        print("AAA")
+        print(kwargs)
+        super().__init__(
+            task=task,
+            size=size,
+            resize=resize,
+            full_obs=full_obs,
+            rgb_img_obs=rgb_img_obs,
+            tile_size=tile_size,
+            render_mode=render_mode,
+            make_agent=CookieEnv, # RawMiddlePoint
             agent_start_pos=(14, 14),
-            make_agent=CookieEnv # RawMiddlePoint
-        )
-        super.__init__(
-            **kwargs,
-            make_agent=CookieEnv
         )

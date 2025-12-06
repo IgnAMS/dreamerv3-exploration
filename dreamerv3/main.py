@@ -232,6 +232,7 @@ def make_env(config, index, **overrides):
       'memmaze': lambda task, **kw: from_gym.FromGym(
           f'MemoryMaze-{task}-v0', **kw),
       'minigrid': 'embodied.envs.new_minigrid:MiddleGoal',
+      'cookiepedro': 'embodied.envs.new_minigrid:CookiePedro'
   }[suite]
   if isinstance(ctor, str):
     module, cls = ctor.split(':')
