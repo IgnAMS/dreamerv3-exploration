@@ -18,7 +18,7 @@ from pathlib import Path
 # Import your wrapper (ajusta ruta si lo guardaste en otro módulo)
 # from embodied.envs.minigrid_empty import SimpleEmpty
 # Si tu archivo se llama diferente, ajusta la import.
-from embodied.envs.new_minigrid import SimpleEmpty, MiddleGoal, RawMiddlePoint, CookiePedro
+from embodied.envs.new_minigrid import SimpleEmpty, MiddleGoal, RawMiddlePoint, CookiePedro, CookiePedrOneHot
 from cookie_env.env import CookieEnv
 
 # key->action mapping (MiniGrid classic)
@@ -107,7 +107,7 @@ def main():
         make_agent=CookieEnv # RawMiddlePoint
     )
     """
-    env = CookiePedro(
+    env = CookiePedrOneHot(
         task=GRID_SIZE,
         size=PIXEL_SIZE,
         resize='pillow',

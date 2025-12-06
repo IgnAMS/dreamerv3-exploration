@@ -462,8 +462,6 @@ class CookiePedro(SimpleEmpty):
         **kwargs
     ):
         from cookie_env.env import CookieEnv
-        print("AAA")
-        print(kwargs)
         super().__init__(
             task=task,
             size=size,
@@ -472,6 +470,33 @@ class CookiePedro(SimpleEmpty):
             rgb_img_obs=rgb_img_obs,
             tile_size=tile_size,
             render_mode=render_mode,
-            make_agent=CookieEnv, # RawMiddlePoint
+            make_agent=CookieEnv,
             agent_start_pos=(14, 14),
+            onehot=False
+        )
+        
+class CookiePedrOneHot(SimpleEmpty):
+    def __init__(
+        self,
+        task=None,
+        size=None,
+        resize=None,
+        full_obs=None,
+        rgb_img_obs=None,
+        tile_size=None,
+        render_mode=None,    
+        **kwargs
+    ):
+        from cookie_env.env import CookieEnv
+        super().__init__(
+            task=task,
+            size=size,
+            resize=resize,
+            full_obs=full_obs,
+            rgb_img_obs=rgb_img_obs,
+            tile_size=tile_size,
+            render_mode=render_mode,
+            make_agent=CookieEnv,
+            agent_start_pos=(14, 14),
+            one_hot=True
         )

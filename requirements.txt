@@ -20,3 +20,4 @@ tqdm
 gymnasium
 minigrid
 tensorboard
+git+https://github.com/pedropalmav/cookie-env.git
