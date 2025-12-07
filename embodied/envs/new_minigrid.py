@@ -462,10 +462,6 @@ class CookiePedro(SimpleEmpty):
             task=task,
             size=size,
             resize=resize,
-            full_obs=full_obs,
-            rgb_img_obs=rgb_img_obs,
-            tile_size=tile_size,
-            render_mode=render_mode,
             make_agent=CookieEnv,
             agent_start_pos=(14, 14),
             onehot=False
