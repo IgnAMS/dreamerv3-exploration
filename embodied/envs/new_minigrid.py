@@ -454,11 +454,7 @@ class CookiePedro(SimpleEmpty):
         self,
         task=None,
         size=None,
-        resize=None,
-        full_obs=None,
-        rgb_img_obs=None,
-        tile_size=None,
-        render_mode=None,    
+        resize="pillow",
         **kwargs
     ):
         from cookie_env.env import CookieEnv
@@ -480,7 +476,7 @@ class CookiePedrOneHot(SimpleEmpty):
         self,
         task=None,
         size=None,
-        resize=None,
+        resize="pillow",
         full_obs=None,
         rgb_img_obs=None,
         tile_size=None,
