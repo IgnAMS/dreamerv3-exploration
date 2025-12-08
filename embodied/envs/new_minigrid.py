@@ -85,6 +85,14 @@ class SimpleEmpty(embodied.Env):
                 raw = RGBImgObsWrapper(raw)
             else:
                 raw = RGBImgPartialObsWrapper(raw)
+            """
+            obs, info = raw.reset()
+            image_data = obs["image"]
+            img = Image.fromarray(image_data)
+            filename = "test_observation_raw.png"
+            img.save(filename)
+            """
+                
 
         # wrap with your FromGym so rest of pipeline sees same interface
         self._from_gym = from_gym.FromGym(raw, obs_key='image', act_key='action')
@@ -328,7 +336,8 @@ class MiddleGoal(embodied.Env):
                 raw = RGBImgObsWrapper(raw)
             else:
                 raw = RGBImgPartialObsWrapper(raw)
-
+            
+            
         # wrap with your FromGym so rest of pipeline sees same interface
         self._from_gym = from_gym.FromGym(raw, obs_key='image', act_key='action')
         # target image size for resizing in _ensure_image (height, width)
@@ -460,6 +469,7 @@ class CookiePedro(SimpleEmpty):
             task=task,
             make_agent=CookieEnv,
             full_obs=False,
+            rgb_img_obs="partial",
             agent_start_pos=(14, 14),
             onehot=False
         )
@@ -475,6 +485,7 @@ class CookiePedrOneHot(SimpleEmpty):
             task=task,
             make_agent=CookieEnv,
             full_obs=False,
+            rgb_img_obs="partial",
             agent_start_pos=(14, 14),
             one_hot=True
         )

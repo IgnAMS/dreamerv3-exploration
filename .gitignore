@@ -7,3 +7,4 @@ MUJOCO_LOG.TXT
 ;
 running_command.txt
 *ppo_middle_grid_final.zip
+test_observation_raw.png
