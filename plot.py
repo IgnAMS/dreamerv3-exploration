@@ -212,7 +212,8 @@ def plot_runs(df, stats, args):
   grouped = df.groupby(['task', 'method'])[['xs', 'ys', 'seed']].agg(np.stack)
   for task, ax in zip(tasks, axes[:len(tasks)]):
     style(ax, xticks=args.xticks, yticks=args.yticks)
-    title = task.replace('_', ' ').replace(':', ' ').split(' ', 1)[1].title()
+#     title = task.replace('_', ' ').replace(':', ' ').split(' ', 1)[1].title()
+    title = task.title()
     ax.set_title(title)
     args.xlim and ax.set_xlim(0, 1.03 * args.xlim)
     args.ylim and ax.set_ylim(0, 1.03 * args.ylim)
