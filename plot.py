@@ -68,7 +68,7 @@ def load_runs(args):
         continue
       seed = f'{indir.name}_{seed}' if len(args.indirs) > 1 else seed
       method = f'{indir.name}_{method}' if args.indir_prefix else method
-      records.append(dict(task=task, method=method, seed=seed))
+      records.append(dict(task=task, method=method, seed=seed, filename=filename))
       filenames.append(filename)
   print(f'Loading {len(records)} runs...')
   # 2. LÓGICA DE FILTRADO: Mantener solo la última (semilla más alta)
