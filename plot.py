@@ -443,4 +443,5 @@ if __name__ == '__main__':
       stats=['runs', 'auto'],
       agg=True,
       todf='',
+      latest_seed_only=False,
   ).parse())
