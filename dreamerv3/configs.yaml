@@ -229,3 +229,7 @@ minigrid:
 cookiepedro:
   task: cookieenv_18x29
   run: {steps: 5e4, envs: 1, train_ratio: 256}
+
+cookiepedroonehot:
+  task: cookieenv_18x29
+  run: {steps: 5e4, envs: 1, train_ratio: 256}

@@ -474,7 +474,7 @@ class CookiePedro(SimpleEmpty):
             onehot=False
         )
         
-class CookiePedrOneHot(SimpleEmpty):
+class CookiePedroOneHot(SimpleEmpty):
     def __init__(
         self,
         task=None,
