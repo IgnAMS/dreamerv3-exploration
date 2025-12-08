@@ -71,6 +71,31 @@ def load_runs(args):
       records.append(dict(task=task, method=method, seed=seed))
       filenames.append(filename)
   print(f'Loading {len(records)} runs...')
+  # 2. LÓGICA DE FILTRADO: Mantener solo la última (semilla más alta)
+  if args.latest_seed_only:
+    df_all = pd.DataFrame(records)
+    
+    if len(df_all) == 0:
+        elements.print("No se encontraron runs después de la recolección inicial.", color='red')
+        return pd.DataFrame()
+
+    def get_sort_key(seed_str):
+        try:
+            return float(re.sub(r'[^\d.]', '', seed_str) or 0) 
+        except ValueError:
+            return 0 # Valor bajo si no se puede parsear
+    latest_runs = df_all.loc[df_all.groupby(['task', 'method'])['seed'].apply(
+        lambda x: x.iloc[x.apply(get_sort_key).idxmax()])]
+    
+    elements.print(f"Filtrando runs: Se mantuvieron {len(latest_runs)} runs (la última semilla de cada Tarea/Método).", color='blue')
+    
+    records = latest_runs.to_dict('records')
+    filenames = [r['filename'] for r in records]
+
+  else:
+      records = records
+      filenames = [r['filename'] for r in records]
+  
   load = functools.partial(
       load_run, xkeys=args.xkeys, ykeys=args.ykeys, ythres=args.ythres)
   if args.workers:
