@@ -83,9 +83,16 @@ def load_runs(args):
         try:
             return float(re.sub(r'[^\d.]', '', seed_str) or 0) 
         except ValueError:
-            return 0 # Valor bajo si no se puede parsear
-    latest_runs = df_all.loc[df_all.groupby(['task', 'method'])['seed'].apply(
-        lambda x: x.iloc[x.apply(get_sort_key).idxmax()])]
+            return 0
+          
+    print(df_all.head())
+    df_all['seed_sort_key'] = df_all['seed'].apply(get_sort_key)
+    latest_indices = df_all.groupby(['task', 'method'])['seed_sort_key'].idxmax()
+    latest_runs = df_all.loc[latest_indices].drop(columns=['seed_sort_key'])
+
+
+    # latest_runs = df_all.loc[df_all.groupby(['task', 'method'])['seed'].apply(
+    #     lambda x: x.iloc[x.apply(get_sort_key).idxmax()])]
     
     elements.print(f"Filtrando runs: Se mantuvieron {len(latest_runs)} runs (la última semilla de cada Tarea/Método).", color='blue')
     
