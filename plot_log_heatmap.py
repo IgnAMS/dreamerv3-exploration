@@ -11,8 +11,8 @@ from matplotlib.widgets import Slider
 
 # ------------ CONFIG ------------
 # cookiepedro18x29/size12m/03
-LOGDIR = Path.home() / "logdir" / "dreamer" / "cookiepedro18x29" / "size12m" / "03"
-OUT_ANIM = Path("plots_nano/log_cookiepedro_gpu_18x29_1M.gif") 
+LOGDIR = Path.home() / "logdir" / "dreamer" / "cookiepedroonehot18x29" / "size12m" / "01"
+OUT_ANIM = Path("plots_nano/log_cookiepedroonehot_gpu_18x29_1M.gif") 
 CMAP = "inferno"
 SMOOTH = 0.0   # gaussian sigma (0 = no smoothing). Requiere scipy.ndimage if >0
 FPS = 4
