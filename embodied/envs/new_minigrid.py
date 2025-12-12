@@ -54,14 +54,14 @@ class SimpleEmpty(embodied.Env):
 
         # build the raw env (our EmptyFixedEnv)
         if make_agent:
-            print()
             raw = make_agent(
                 height=int(grid_size[0]),
                 width=int(grid_size[1]),
                 agent_start_pos=agent_start_pos,
                 agent_start_dir=agent_start_dir,
                 max_steps=max_steps,
-                render_mode=render_mode    
+                render_mode=render_mode,
+                **kwargs  
             )
         else:
             print("Make agent no existe")
@@ -70,13 +70,16 @@ class SimpleEmpty(embodied.Env):
                 agent_start_pos=agent_start_pos,
                 agent_start_dir=agent_start_dir,
                 max_steps=max_steps,
-                render_mode=render_mode    
+                render_mode=render_mode,
             )
 
         # apply wrappers for observations if requested
         if full_obs:
             raw = FullyObsWrapper(raw)
 
+        # TODO: Handle onehot case! 
+        
+        # if rgb_img_obs and not kwargs.get("onehot", False):
         if rgb_img_obs:
             # normalize option
             if rgb_img_obs is True:
@@ -473,7 +476,10 @@ class CookiePedro(SimpleEmpty):
             agent_start_pos=(14, 14),
             onehot=False
         )
-        
+
+
+# TODO: Fix Cookie pedro as a new entirely different model
+# because it is not a picture!
 class CookiePedroOneHot(SimpleEmpty):
     def __init__(
         self,
@@ -487,5 +493,5 @@ class CookiePedroOneHot(SimpleEmpty):
             full_obs=False,
             rgb_img_obs="partial",
             agent_start_pos=(14, 14),
-            one_hot=True
+            onehot=True
         )
