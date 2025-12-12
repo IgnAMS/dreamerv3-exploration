@@ -23,7 +23,7 @@ class SimpleEnv(embodied.Env):
     con tamaño arbitrario y lo envuelve en FromGym.
 
     Ejemplo:
-      env = SimpleEmpty(task=8, size=(128,128), full_obs=True, rgb_img_obs='full')
+      env = SimpleEmpty(task=8, size=(128,128), rgb_img_obs='full')
     """
 
     def __init__(
@@ -67,8 +67,9 @@ class SimpleEnv(embodied.Env):
                 render_mode=render_mode,
             )
 
-        obs = raw.reset()     
-
+        obs, info = raw.reset()
+        print(obs)
+        
         # wrap with your FromGym so rest of pipeline sees same interface
         self._from_gym = from_gym.FromGym(raw, obs_key='image', act_key='action')
         # target image size for resizing in _ensure_image (height, width)
@@ -123,15 +124,15 @@ class SimpleEnv(embodied.Env):
         return self._from_gym.act_space
 
     def reset(self, **kwargs):
-        result = self._from_gym.reset(**kwargs)
-        obs = self._ensure_image(result)
+        obs = self._from_gym.reset(**kwargs)
+        # obs = self._ensure_image(result)
         if "mission" in obs:
             del obs["mission"]
         return obs
 
     def step(self, action):
-        result = self._from_gym.step(action)
-        obs = self._ensure_image(result)
+        obs = self._from_gym.step(action)
+        print(obs["image"])
         if "mission" in obs:
             del obs["mission"]
         return obs
@@ -170,7 +171,7 @@ class SimpleEmpty(embodied.Env):
 
     def __init__(
         self,
-        task,                    # tamaño como int o string (p.ej. '32' o 32)
+        task,
         size: Tuple[int, int] = (80, 80),
         resize: str = 'pillow',
         full_obs: bool = True,
@@ -456,7 +457,6 @@ class MiddleGoal(SimpleEmpty):
             full_obs=full_obs,
             tile_size=tile_size,
             render_mode=render_mode,
-            full_obs=True,
             rgb_img_obs=rgb_img_obs,
             agent_start_pos=agent_start_pos,
             agent_start_dir=agent_start_dir,
@@ -484,7 +484,7 @@ class CookiePedro(SimpleEmpty):
 
 # TODO: Fix Cookie pedro as a new entirely different model
 # because it is not a picture!
-class CookiePedroOneHot(SimpleEmpty):
+class CookiePedroOneHot(SimpleEnv):
     def __init__(
         self,
         task=None,
@@ -494,8 +494,6 @@ class CookiePedroOneHot(SimpleEmpty):
         super().__init__(
             task=task,
             make_env=CookieEnv,
-            full_obs=False,
-            rgb_img_obs="partial",
             agent_start_pos=(14, 14),
             onehot=True
         )
