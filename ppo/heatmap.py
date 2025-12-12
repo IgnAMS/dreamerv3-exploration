@@ -26,11 +26,9 @@ class HeatmapCallback(BaseCallback):
 
     def _on_training_start(self) -> None:
         """Called once before the first call to `_on_step()`."""
-        # self.log_dir = self.logger.dir
-        # CORRECCIÓN CLAVE: Aseguramos que self.n_envs esté definido 
-        # obteniéndolo del modelo, que ya está disponible aquí.
         if not self.log_dir:
-            self.log_dir = self.logger.dir
+            self.log_dir = Path(self.logger.dir)
+        print(f"\n\nGUARDANDO EN {self.log_dir}")
             
         if self.model is not None and hasattr(self.model, 'n_envs'):
             self.n_envs = self.model.n_envs
@@ -38,29 +36,21 @@ class HeatmapCallback(BaseCallback):
             # En caso de un setup inusual, lanzamos un error más informativo
             raise AttributeError("El modelo no está disponible o no tiene el atributo 'n_envs'.")
 
-
     def _on_step(self) -> bool:
         """Called by the RL model at each step of the training."""
-        
         # 1. Recolectar datos de todos los entornos vectorizados
-        # self.locals['infos'] es una lista de diccionarios, uno por entorno.
-        # Gracias a _on_training_start, self.n_envs ahora está disponible.
         for i in range(self.n_envs):
-            # Verificar si la info es válida y contiene la posición del agente
             info = self.locals['infos'][i]
             if info and 'agent_pos' in info:
-                # agent_pos es un array numpy, lo convertimos a tupla para usarlo como clave
                 pos = tuple(info['agent_pos'])
                 self.position_counts[pos] += 1
-                
-         # 2. Llamar a generate_heatmap solo una vez cuando se alcanza la frecuencia de guardado.
+        # 2. Llamar a generate_heatmap solo una vez cuando se alcanza la frecuencia de guardado.
         if self.n_calls % self.save_freq == 0:
-            self.generate_heatmap()
+            self.save_heatmap()
             
-
         return True
 
-    def generate_heatmap(self):
+    def save_heatmap(self):
         """Generates and saves the heatmap plot."""
         if not self.position_counts:
             return
@@ -78,34 +68,4 @@ class HeatmapCallback(BaseCallback):
         pkl_filename = self.log_dir / f"heatmap_{self.size}_{int(step)}.pkl"
         with open(pkl_filename, "wb") as f:
             pickle.dump(dict(self.position_counts), f)
-            
-        # Crear el gráfico
-        plt.figure(figsize=(8, 8))
         
-        # Plotear la matriz 
-        plt.imshow(heatmap_matrix, cmap='viridis', origin='lower')
-        
-        plt.title(f'Mapa de Calor de la Posición del Agente (Step: {self.num_timesteps})')
-        plt.colorbar(label='Frecuencia de Visita')
-        plt.xticks(np.arange(self.size))
-        plt.yticks(np.arange(self.size))
-        plt.grid(True, color='red', alpha=0.3)
-        
-        # Marcar las metas 
-        corner_goal = (self.size - 2, self.size - 2)
-        middle_goal = (int((self.size - 1) / 2), int((self.size - 1) / 2))
-        
-        # El plot usa (x, y), donde x es horizontal (columna) y y es vertical (fila)
-        plt.plot(corner_goal[0], corner_goal[1], 'rs', markersize=10, label='Meta Esquina (1.0)')
-        plt.plot(middle_goal[0], middle_goal[1], 'go', markersize=10, label='Meta Media (0.2)')
-        plt.legend()
-        
-        # Guardar el archivo en el directorio de logs
-        filename = os.path.join(self.log_dir, f'heatmap_step_{self.num_timesteps}.png')
-        plt.savefig(filename)
-        plt.close()
-
-        if self.verbose > 0:
-            print(f"Heatmap guardado en {filename}")
-        
-        return

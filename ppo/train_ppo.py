@@ -43,7 +43,7 @@ def run_training(
     # 3. Inicializar el Callback
     heatmap_callback = HeatmapCallback(
         size=grid_size, 
-        save_freq=heatmap_save_freq,
+        save_freq=heatmap_save_freq // n_envs,
         verbose=1,
         # log_dir=LOG_DIR,
     )
@@ -103,7 +103,7 @@ def probar_multiples_parametros():
             "heatmap_save_freq": 1000,
             "batch_size": 64,
             "n_steps": 2048 // 4,
-            "learning_rate": 1e-4, 
+            "learning_rate": 1e-4,
             "gamma": 0.997,
             "exp_description": "baseline",
             "make_env": CornerEnv, "env_name": "cornerenv"

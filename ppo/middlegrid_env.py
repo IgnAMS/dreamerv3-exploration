@@ -60,6 +60,45 @@ class RawMiddleGoal(EmptyEnv):
         info['agent_pos'] = self.agent_pos
         
         return obs, reward, terminated, truncated, info
+    
+
+class RawCornerEnv(EmptyEnv):
+    def __init__(self, size=16, agent_start_pos=(1, 1), agent_start_dir=0, **kwargs):
+        super().__init__(
+            size=size,
+            agent_start_pos=agent_start_pos,
+            agent_start_dir=agent_start_dir,
+            max_steps=4 * size * size,
+            **kwargs, 
+        )
+        self.corner_goal_pos = None
+        self.mission = 0
+
+    def _gen_grid(self, width, height):
+        self.grid = Grid(width, height)
+        self.grid.wall_rect(0, 0, width, height)
+
+        self.corner_goal_pos = (width - 2, height - 2)
+
+        self.put_obj(Goal(), *self.corner_goal_pos)
+
+        if self.agent_start_pos is not None:
+            self.agent_pos = self.agent_start_pos
+            self.agent_dir = self.agent_start_dir
+        else:
+            self.place_agent()
+
+    def step(self, action):
+        obs, reward, terminated, truncated, info = super().step(action)
+        if terminated:
+            agent_pos_tuple = tuple(self.agent_pos)
+            if agent_pos_tuple == self.corner_goal_pos:
+                reward = 1.0
+            else:
+                 reward = 0.0
+
+        info['agent_pos'] = self.agent_pos
+        return obs, reward, terminated, truncated, info
 
 class ExtractSingleKeyObs(gym.Wrapper):
     """
@@ -102,7 +141,7 @@ def MiddleGridEnv(size=16):
 
 
 def CornerEnv(size=16):
-    env = EmptyEnv(size=size, render_mode="rgb_array")
+    env = RawCornerEnv(size=size, render_mode="rgb_array")
     env = RGBImgObsWrapper(env) 
     env = FilterObservation(env, filter_keys=['image'])
     env = ExtractSingleKeyObs(env)
