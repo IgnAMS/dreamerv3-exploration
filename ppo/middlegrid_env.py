@@ -51,7 +51,7 @@ class RawMiddleGoal(EmptyEnv):
         if terminated:
             agent_pos_tuple = tuple(self.agent_pos)
             if agent_pos_tuple == self.corner_goal_pos:
-                reward = 1.0
+                reward = 10.0
             elif agent_pos_tuple == self.middle_goal_pos:
                 reward = 0.2
             else:
@@ -100,9 +100,10 @@ def MiddleGridEnv(size=16):
     env = ExtractSingleKeyObs(env)
     return env
 
-# Para registrar el entorno en gymnasium (opcional pero buena práctica)
-gym.envs.registration.register(
-    id='MiddleGrid-v0',
-    entry_point='middle_grid_env:MiddleGridEnv',
-    kwargs={'size': 16},
-)
+
+def CornerEnv(size=16):
+    env = EmptyEnv(size=size, render_mode="rgb_array")
+    env = RGBImgObsWrapper(env) 
+    env = FilterObservation(env, filter_keys=['image'])
+    env = ExtractSingleKeyObs(env)
+    return env

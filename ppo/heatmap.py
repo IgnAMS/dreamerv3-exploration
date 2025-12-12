@@ -10,16 +10,19 @@ class HeatmapCallback(BaseCallback):
     """
     A custom callback to log agent position and generate a heatmap plot periodically.
     """
-    def __init__(self, size: int, save_freq: int, verbose: int = 0, log_dir: str = ""):
+    def __init__(self, size: int, save_freq: int, verbose: int = 0, log_dir: str = "", corner=False):
         super().__init__(verbose)
         self.size = size
         self.save_freq = save_freq
         self.position_counts = defaultdict(int)
         # self.log_dir = Path(log_dir)
-        if log_dir:
+        if log_dir != "":
             self.log_dir = Path(log_dir)
+        else:
+            self.log_dir = None
         # Inicializamos n_envs para que exista, aunque se establecerá en _on_training_start
         self.n_envs = 0 
+        self.corner = corner
 
     def _on_training_start(self) -> None:
         """Called once before the first call to `_on_step()`."""
@@ -72,7 +75,7 @@ class HeatmapCallback(BaseCallback):
                 heatmap_matrix[y, x] = count
         
         step = self.num_timesteps
-        pkl_filename = self.log_dir / f"heatmap_data_{self.size}_{int(step)}.pkl"
+        pkl_filename = self.log_dir / f"heatmap_{self.size}_{int(step)}.pkl"
         with open(pkl_filename, "wb") as f:
             pickle.dump(dict(self.position_counts), f)
             

@@ -12,7 +12,9 @@ from matplotlib.widgets import Slider
 # ------------ CONFIG ------------
 # cookiepedro18x29/size12m/03
 LOGDIR = Path.home() / "logdir" / "dreamer" / "cookiepedroonehot18x29" / "size12m" / "01"
-OUT_ANIM = Path("plots_nano/log_cookiepedroonehot_gpu_18x29_1M.gif") 
+LOGDIR = Path.home() / "Documents" / "Investigacion RL" / "Crafter prueba" / "dreamerv3-exploration" / "ppo_logs_middle_grid" 
+print(LOGDIR)
+OUT_ANIM = Path("plots_nano/log_PPO_500k.gif") 
 CMAP = "inferno"
 SMOOTH = 0.0   # gaussian sigma (0 = no smoothing). Requiere scipy.ndimage if >0
 FPS = 4
@@ -23,8 +25,12 @@ def find_heatmap_files(logdir):
     # sort by the integer in filename
     def keyfn(p):
         m = re.search(r"heatmap_(\d+)\.pkl$", p)
+        if m is None:
+            m = re.search(r"heatmap_data_55_(\d+)\.pkl$", p)
+        print(m)
         return int(m.group(1)) if m else 0
     files = sorted(files, key=keyfn)
+    print(*files, sep="\n\n")
     return files
 
 def load_heatmap_file(p):
