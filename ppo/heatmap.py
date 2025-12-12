@@ -43,7 +43,7 @@ class HeatmapCallback(BaseCallback):
             if info and 'agent_pos' in info:
                 pos = tuple(info['agent_pos'])
                 self.position_counts[pos] += 1
-        # 2. Llamar a generate_heatmap solo una vez cuando se alcanza la frecuencia de guardado.
+
         if self.n_calls % self.save_freq == 0:
             self.save_heatmap()
             

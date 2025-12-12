@@ -73,11 +73,7 @@ def run_training(
 
     # 6. Guardar el modelo final
     model.save(os.path.join(log_dir, "ppo_middle_grid_final.zip"))
-    
-    # 7. Generar el mapa de calor final al terminar
-    heatmap_callback.generate_heatmap()
-
-
+    heatmap_callback.save_heatmap()
 
 def probar_multiples_parametros():
     
