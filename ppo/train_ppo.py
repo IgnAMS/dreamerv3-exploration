@@ -108,40 +108,40 @@ def probar_multiples_parametros():
             "grid_size": 22, "n_envs": 8, "total_timesteps": 100000,
             "heatmap_save_freq": 1000,
             "batch_size": 64,
-            "n_steps": 2048 // 4,
+            "n_steps": 2048 // 8,
             "learning_rate": 1e-4, 
             "gamma": 0.997,
-            "exp_description": "150k_8_envs",
+            "exp_description": "100k_8_envs",
             "make_env": CornerEnv, "env_name": "cornerenv"
         },
         {
             "grid_size": 22, "n_envs": 16, "total_timesteps": 100000,
             "heatmap_save_freq": 1000,
             "batch_size": 64,
-            "n_steps": 2048 // 4,
+            "n_steps": 2048 // 16,
             "learning_rate": 1e-4, 
             "gamma": 0.997,
-            "exp_description": "150k_16_envs",
+            "exp_description": "100k_16_envs",
             "make_env": CornerEnv, "env_name": "cornerenv"
         },
         {
-            "grid_size": 22, "n_envs": 64, "total_timesteps": 100000,
+            "grid_size": 22, "n_envs": 64, "total_timesteps": 150000,
             "heatmap_save_freq": 1000,
             "batch_size": 64,
-            "n_steps": 2048 // 4,
-            "learning_rate": 1e-4, 
-            "gamma": 0.997,
-            "exp_description": "250k_64_envs",
-            "make_env": CornerEnv, "env_name": "cornerenv"
-        },
-        {
-            "grid_size": 22, "n_envs": 128, "total_timesteps": 150000,
-            "heatmap_save_freq": 1000,
-            "batch_size": 64,
-            "n_steps": 2048 // 4,
+            "n_steps": 2048 // 64,
             "learning_rate": 1e-4, 
             "gamma": 0.997,
             "exp_description": "150k_64_envs",
+            "make_env": CornerEnv, "env_name": "cornerenv"
+        },
+        {
+            "grid_size": 22, "n_envs": 128, "total_timesteps": 200000,
+            "heatmap_save_freq": 1000,
+            "batch_size": 64,
+            "n_steps": 2048 // 128,
+            "learning_rate": 1e-4, 
+            "gamma": 0.997,
+            "exp_description": "200k_128_envs",
             "make_env": CornerEnv, "env_name": "cornerenv"
         },
         {
@@ -151,7 +151,7 @@ def probar_multiples_parametros():
             "n_steps": 2048 // 4,
             "learning_rate": 1e-4, 
             "gamma": 0.997,
-            "exp_description": "150k_4_envs_256bs",
+            "exp_description": "50k_4_envs_256bs",
             "make_env": CornerEnv, "env_name": "cornerenv"
         },
         {
@@ -161,12 +161,22 @@ def probar_multiples_parametros():
             "n_steps": 2048 // 4,
             "learning_rate": 1e-5, 
             "gamma": 0.997,
-            "exp_description": "150k_4_envs_256bs_lr_1e-5",
+            "exp_description": "50k_4_envs_256bs_lr_1e-5",
+            "make_env": CornerEnv, "env_name": "cornerenv"
+        },
+        {
+            "grid_size": 22, "n_envs": 8, "total_timesteps": 150000,
+            "heatmap_save_freq": 1000,
+            "batch_size": 256,
+            "n_steps": 2048 // 8,
+            "learning_rate": 1e-5, 
+            "gamma": 0.997,
+            "exp_description": "150k_8_envs_256bs_lr_1e-5",
             "make_env": CornerEnv, "env_name": "cornerenv"
         }
     ]
     for exp in experimentos:
-        logdir = f"./ppo_logs/{exp['env_name']}_{exp['grid_size']}/{exp['exp_description']}"
+        logdir = f"./ppo_logs/cornerenv22_nstep_{exp['grid_size']}/{exp['exp_description']}"
         run_training(
             log_dir=logdir,
             **exp,
