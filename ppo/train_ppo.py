@@ -95,7 +95,7 @@ def probar_multiples_parametros():
     
     experimentos = [
         {
-            "grid_size": 12, "n_envs": 4, "total_timesteps": 50000,
+            "grid_size": 22, "n_envs": 4, "total_timesteps": 50000,
             "heatmap_save_freq": 1000,
             "batch_size": 64,
             "n_steps": 2048 // 4,
@@ -105,7 +105,7 @@ def probar_multiples_parametros():
             "make_env": CornerEnv, "env_name": "cornerenv"
         },
         {
-            "grid_size": 12, "n_envs": 8, "total_timesteps": 100000,
+            "grid_size": 22, "n_envs": 8, "total_timesteps": 100000,
             "heatmap_save_freq": 1000,
             "batch_size": 64,
             "n_steps": 2048 // 4,
@@ -115,7 +115,7 @@ def probar_multiples_parametros():
             "make_env": CornerEnv, "env_name": "cornerenv"
         },
         {
-            "grid_size": 12, "n_envs": 16, "total_timesteps": 100000,
+            "grid_size": 22, "n_envs": 16, "total_timesteps": 100000,
             "heatmap_save_freq": 1000,
             "batch_size": 64,
             "n_steps": 2048 // 4,
@@ -125,7 +125,7 @@ def probar_multiples_parametros():
             "make_env": CornerEnv, "env_name": "cornerenv"
         },
         {
-            "grid_size": 12, "n_envs": 64, "total_timesteps": 100000,
+            "grid_size": 22, "n_envs": 64, "total_timesteps": 100000,
             "heatmap_save_freq": 1000,
             "batch_size": 64,
             "n_steps": 2048 // 4,
@@ -135,7 +135,7 @@ def probar_multiples_parametros():
             "make_env": CornerEnv, "env_name": "cornerenv"
         },
         {
-            "grid_size": 12, "n_envs": 128, "total_timesteps": 150000,
+            "grid_size": 22, "n_envs": 128, "total_timesteps": 150000,
             "heatmap_save_freq": 1000,
             "batch_size": 64,
             "n_steps": 2048 // 4,
@@ -145,7 +145,7 @@ def probar_multiples_parametros():
             "make_env": CornerEnv, "env_name": "cornerenv"
         },
         {
-            "grid_size": 12, "n_envs": 4, "total_timesteps": 50000,
+            "grid_size": 22, "n_envs": 4, "total_timesteps": 50000,
             "heatmap_save_freq": 1000,
             "batch_size": 256,
             "n_steps": 2048 // 4,
@@ -155,7 +155,7 @@ def probar_multiples_parametros():
             "make_env": CornerEnv, "env_name": "cornerenv"
         },
         {
-            "grid_size": 12, "n_envs": 4, "total_timesteps": 50000,
+            "grid_size": 22, "n_envs": 4, "total_timesteps": 50000,
             "heatmap_save_freq": 1000,
             "batch_size": 256,
             "n_steps": 2048 // 4,
