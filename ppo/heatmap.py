@@ -28,7 +28,6 @@ class HeatmapCallback(BaseCallback):
         """Called once before the first call to `_on_step()`."""
         if not self.log_dir:
             self.log_dir = Path(self.logger.dir)
-        print(f"\n\nGUARDANDO EN {self.log_dir}")
             
         if self.model is not None and hasattr(self.model, 'n_envs'):
             self.n_envs = self.model.n_envs
