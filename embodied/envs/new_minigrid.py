@@ -89,6 +89,12 @@ class SimpleEnv(embodied.Env):
         return None
 
     @property
+    def obs_space(self):
+        # Copiamos el obs_space declarado por FromGym y forzamos image a uint8 (H,W,3)
+        spaces = self._from_gym.obs_space.copy()
+        return spaces
+
+    @property
     def info(self):
         """Info tipada (numpy arrays) para que el driver pueda apilar y luego usar."""
         out = {}
