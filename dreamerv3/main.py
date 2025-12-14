@@ -234,7 +234,7 @@ def make_env(config, index, **overrides):
       'minigrid': 'embodied.envs.new_minigrid:MiddleGoal',
       'cookiepedro': 'embodied.envs.new_minigrid:CookiePedro',
       'cookiepedroonehot': 'embodied.envs.new_minigrid:CookiePedroOneHot',
-      'cookiepedroonehot': 'embodied.envs.new_minigrid:DeterministicCookie',
+      'cookiepedrodeterministic': 'embodied.envs.new_minigrid:DeterministicCookie',
   }[suite]
   if isinstance(ctor, str):
     module, cls = ctor.split(':')
