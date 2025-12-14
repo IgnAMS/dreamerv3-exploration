@@ -421,6 +421,8 @@ class DeterministicCookie(SimpleImageEnv):
             make_env=CookieEnv,
             cookie_spawner=deterministic_corner,
             agent_start_pos=(14, 14),
+            full_obs=False,
+            rgb_img_obs="partial",
             onehot=False,
             **kwargs,
         )
