@@ -216,6 +216,13 @@ class SimpleImageEnv(SimpleEnv):
         self.tile_size = tile_size
         self._renderer = self._get_underlying_renderer(self._from_gym)
 
+    @property
+    def obs_space(self):
+        # Copiamos el obs_space declarado por FromGym y forzamos image a uint8 (H,W,3)
+        spaces = self._from_gym.obs_space.copy()
+        spaces['image'] = elements.Space(np.uint8, (*self.size, 3))
+        return spaces
+
     def reset(self, **kwargs):
         result = self._from_gym.reset(**kwargs)
         obs = self._ensure_image(result)
@@ -229,6 +236,7 @@ class SimpleImageEnv(SimpleEnv):
         if "mission" in obs:
             del obs["mission"]
         return obs
+
 
     def _ensure_image(self, obs):
         # obs puede ser dict o un objeto más; asumimos dict-like
