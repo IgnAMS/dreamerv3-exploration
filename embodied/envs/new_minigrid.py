@@ -393,3 +393,20 @@ class CookiePedroOneHot(SimpleEnv):
             agent_start_pos=(14, 14),
             onehot=True
         )
+        
+class DeterministicCookie(SimpleImageEnv):
+    def __init__(
+        self,
+        task=None,
+        **kwargs
+    ):
+        from cookie_env.env import CookieEnv
+        from cookie_env.utils.spawner import deterministic_corner
+        super().__init__(
+            task=task,
+            make_env=CookieEnv,
+            cookie_spawner=deterministic_corner,
+            agent_start_pos=(14, 14),
+            onehot=False,
+            **kwargs,
+        )

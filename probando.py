@@ -18,8 +18,14 @@ from pathlib import Path
 # Import your wrapper (ajusta ruta si lo guardaste en otro módulo)
 # from embodied.envs.minigrid_empty import SimpleEmpty
 # Si tu archivo se llama diferente, ajusta la import.
-from embodied.envs.new_minigrid import SimpleEmpty, MiddleGoal, RawMiddlePoint, CookiePedro, CookiePedroOneHot
-from cookie_env.env import CookieEnv
+from embodied.envs.new_minigrid import (
+    SimpleImageEnv, 
+    MiddleGoal, 
+    RawMiddlePoint, 
+    CookiePedro, 
+    CookiePedroOneHot,
+    DeterministicCookie
+)
 
 # key->action mapping (MiniGrid classic)
 KEY_TO_ACTION = {
@@ -107,7 +113,7 @@ def main():
         make_agent=CookieEnv # RawMiddlePoint
     )
     """
-    env = CookiePedroOneHot(
+    env = DeterministicCookie(
         task=GRID_SIZE,
         size=PIXEL_SIZE,
         resize='pillow',
@@ -115,7 +121,6 @@ def main():
         rgb_img_obs=RGB_IMG,
         tile_size=TILE_SIZE,
         render_mode=RENDER_MODE,
-        agent_start_pos=(14, 14),
     )
 
     # reset and get starting obs
