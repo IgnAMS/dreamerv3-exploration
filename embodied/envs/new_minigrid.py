@@ -426,3 +426,28 @@ class DeterministicCookie(SimpleImageEnv):
             onehot=False,
             **kwargs,
         )
+
+class TwoCookies(SimpleImageEnv):
+    def __init__(
+        self,
+        task=None,
+        **kwargs
+    ):
+        from cookie_env.env import CookieEnv
+        from cookie_env.utils.spawner import VALID_CORNERS
+        import random
+        
+        def two_cookies_spawner():
+            return random.choice(VALID_CORNERS[:2])
+        
+        super().__init__(
+            task=task,
+            make_env=CookieEnv,
+            cookie_spawner=two_cookies_spawner,
+            agent_start_pos=(14, 14),
+            full_obs=False,
+            max_steps=10_000,
+            rgb_img_obs="partial",
+            onehot=False,
+            **kwargs,
+        )
