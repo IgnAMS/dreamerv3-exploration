@@ -11,10 +11,10 @@ from matplotlib.widgets import Slider
 
 # ------------ CONFIG ------------
 # cookiepedro18x29/size12m/03
-LOGDIR = Path.home() / "logdir" / "dreamer" / "cookiepedrodeterministic18x29" / "size12m" / "02"
+LOGDIR = Path.home() / "logdir" / "dreamer" / "cookiepedrotwocookies18x29" / "size12m" / "02"
 # LOGDIR = Path.home() / "Documents" / "Investigacion RL" / "Crafter prueba" / "dreamerv3-exploration" / "ppo_logs_middle_grid" 
 print(LOGDIR)
-OUT_ANIM = Path("plots_nano/log_deterministic_cookie_1M.gif") 
+OUT_ANIM = Path("plots_nano/log_two_cookies_1M.gif") 
 CMAP = "inferno"
 SMOOTH = 0.0   # gaussian sigma (0 = no smoothing). Requiere scipy.ndimage if >0
 FPS = 4
