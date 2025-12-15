@@ -1,0 +1,132 @@
+\documentclass[11pt,a4paper]{article}
+
+% --------------------
+% Paquetes básicos
+% --------------------
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage[spanish]{babel}
+
+\usepackage{amsmath, amssymb}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{hyperref}
+\usepackage{cite}
+
+% Márgenes
+\usepackage{geometry}
+\geometry{margin=2.5cm}
+
+% Espaciado
+\usepackage{setspace}
+\onehalfspacing
+
+\title{\textbf{Resumen del Paper:}\\
+\large Curiosity-Driven Exploration by Self-supervised Prediction}
+
+\author{Ignacio Monardes}
+
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\section*{Referencia}
+\noindent
+\textbf{Autores:} Deepak Pathak et al. \\
+\textbf{Título:} \textit{Curiosity-Driven Exploration by Self-supervised Prediction} \\
+\textbf{Conferencia/Journal:} ICML 2017 \\
+\textbf{Link:} \url{https://arxiv.org/abs/1705.05363}
+
+% --------------------
+\section{Motivación}
+% --------------------
+Explica:
+\begin{itemize}
+    \item ¿Qué problema aborda el paper?
+    En muchos ambientes las rewards son sparse, por lo que una manera de incentivar al agente a que explore es dar una reward intrinseca por explorar.
+    Se define curiosidad como 
+
+
+    \item ¿Por qué es importante?
+
+    \item ¿Qué limitaciones tienen los enfoques previos?
+
+\end{itemize}
+
+% --------------------
+\section{Idea Principal}
+% --------------------
+Describe la contribución central del paper en alto nivel:
+\begin{itemize}
+    \item ¿Qué proponen?
+    \item ¿Qué lo hace diferente a trabajos anteriores?
+\end{itemize}
+
+% --------------------
+\section{Metodología}
+% --------------------
+Explica brevemente:
+\begin{itemize}
+    \item Modelo / algoritmo principal
+    \item Componentes clave
+    \item Supuestos importantes
+\end{itemize}
+
+Si es necesario, puedes incluir ecuaciones:
+\begin{equation}
+    J(\theta) = \mathbb{E}_{\pi_\theta} \left[ \sum_t \gamma^t r_t \right]
+\end{equation}
+
+% --------------------
+\section{Experimentos}
+% --------------------
+Describe:
+\begin{itemize}
+    \item Entornos o datasets
+    \item Métricas usadas
+    \item Baselines
+\end{itemize}
+
+% --------------------
+\section{Resultados}
+% --------------------
+Resume los resultados más importantes:
+\begin{itemize}
+    \item ¿Supera a los baselines?
+    \item ¿En qué escenarios funciona mejor / peor?
+\end{itemize}
+
+Opcional: referencia a figuras/tablas del paper.
+
+% --------------------
+\section{Discusión Crítica}
+% --------------------
+Tu análisis:
+\begin{itemize}
+    \item Fortalezas
+    \item Debilidades
+    \item Supuestos cuestionables
+    \item Qué no queda claro
+\end{itemize}
+
+% --------------------
+\section{Conclusiones}
+% --------------------
+
+% --------------------
+\section*{Comentario Personal (opcional)}
+% --------------------
+Tu opinión:
+\begin{itemize}
+    \item ¿Te parece una buena contribución?
+    \item ¿La usarías en tu investigación?
+\end{itemize}
+
+% --------------------
+\bibliographystyle{plain}
+\bibliography{references}
+
+\end{document}
