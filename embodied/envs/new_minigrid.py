@@ -446,8 +446,8 @@ class TwoCookies(SimpleImageEnv):
             cookie_spawner=two_cookies_spawner,
             agent_start_pos=(14, 14),
             full_obs=False,
-            max_steps=10_000,
             rgb_img_obs="partial",
             onehot=False,
+            max_steps=4*18*29,
             **kwargs,
         )
