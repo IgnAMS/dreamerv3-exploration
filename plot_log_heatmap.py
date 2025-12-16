@@ -11,7 +11,7 @@ from matplotlib.widgets import Slider
 
 # ------------ CONFIG ------------
 # cookiepedro18x29/size12m/03
-LOGDIR = Path.home() / "logdir" / "dreamer" / "cookiepedrotwocookies18x29" / "size12m" / "02"
+LOGDIR = Path.home() / "logdir" / "dreamer" / "cookiepedrotwocookies18x29" / "size12m" / "04"
 # LOGDIR = Path.home() / "Documents" / "Investigacion RL" / "Crafter prueba" / "dreamerv3-exploration" / "ppo_logs_middle_grid" 
 print(LOGDIR)
 OUT_ANIM = Path("plots_nano/log_two_cookies_1M.gif") 
