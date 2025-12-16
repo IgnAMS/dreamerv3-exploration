@@ -114,14 +114,14 @@ def main():
         make_agent=CookieEnv # RawMiddlePoint
     )
     """
-    env = TwoCookies(
+    env = DeterministicCookie(
         task=GRID_SIZE,
         size=PIXEL_SIZE,
         resize='pillow',
         tile_size=TILE_SIZE,
         render_mode=RENDER_MODE,
     )
-
+    
     # reset and get starting obs
     obs = env.reset()
 

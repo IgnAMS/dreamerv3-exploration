@@ -389,6 +389,8 @@ class CookiePedro(SimpleImageEnv):
             rgb_img_obs="partial",
             agent_start_pos=(14, 14),
             onehot=False,
+            max_steps=4*18*20,
+            **kwargs
         )
 
 
@@ -405,7 +407,9 @@ class CookiePedroOneHot(SimpleEnv):
             task=task,
             make_env=CookieEnv,
             agent_start_pos=(14, 14),
-            onehot=True
+            onehot=True,
+            max_steps=4*18*20,
+            **kwargs
         )
         
 class DeterministicCookie(SimpleImageEnv):
@@ -424,6 +428,7 @@ class DeterministicCookie(SimpleImageEnv):
             full_obs=False,
             rgb_img_obs="partial",
             onehot=False,
+            max_steps=4*18*20,
             **kwargs,
         )
 
