@@ -104,3 +104,4 @@ def main():
 if __name__ == "__main__":
     main()
     # python3 ppo/plot_ppo_by_episode.py --base-dir ./ppo_logs/cornerenv_22
+    # python3 ppo/plot_ppo_by_episode.py --base-dir ./ppo_logs/cornerenv22_run3
