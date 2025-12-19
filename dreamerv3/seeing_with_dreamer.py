@@ -1,7 +1,7 @@
 import yaml
 from embodied.envs.new_minigrid import CookiePedro, DeterministicCookie
 import embodied
-from dreamerv3 import Agent
+from dreamerv3.agent import Agent
 import elements
 from PIL import Image
 import jax
