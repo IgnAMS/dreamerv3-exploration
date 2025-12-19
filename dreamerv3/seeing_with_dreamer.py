@@ -1,7 +1,7 @@
 import yaml
-from embodied.envs.new_minigrid import CookiePedro, DeterministicCookie
 import embodied
 from dreamerv3.agent import Agent
+from dreamerv3.main import make_env
 import elements
 from elements import Config, Flags
 from PIL import Image
@@ -51,7 +51,8 @@ config = elements.Flags(config).parse()
 print("TRES\n\n")
 
 task = config.task.split("_")[-1]
-env = DeterministicCookie(task=task)
+env = make_env(config)
+
 
 agent = Agent(
     env.obs_space,
