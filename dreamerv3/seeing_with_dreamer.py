@@ -11,7 +11,7 @@ import numpy as np
 print("UNO\n\n")
 
 LOGDIR = "/home/iamonardes/logdir/dreamer/cookiepedrodeterministic18x29/size12m/05"
-CKPT = f"{LOGDIR}/ckpt/agent"
+CKPT = f"{LOGDIR}/ckpt/agent/AAAA"
 CONFIG = f"{LOGDIR}/config.yaml"
 
 print("DOS\n\n")
@@ -24,7 +24,7 @@ def dfs(node, prefix=[]):
     print(type(node))
     if not isinstance(node, dict):
         if isinstance(node, list):
-            value = node.strip("[").strip("]")
+            value = str(node).strip("[").strip("]")
             value = "".join(value.split(" "))
             argv.append("--" + ".".join(prefix) + "=" + value)
         else:
