@@ -16,34 +16,6 @@ CKPT = f"{LOGDIR}/ckpt/agent/AAAA"
 CONFIG = f"{LOGDIR}/config.yaml"
 
 print("DOS\n\n")
-"""
-with open(CONFIG, "r") as f:
-    saved = yaml.safe_load(f)
-argv = []
-def dfs(node, prefix=[]):
-    if not isinstance(node, dict):
-        if isinstance(node, list):
-            value = str(node).strip("[").strip("]")
-            value = "".join(value.split(" "))
-            argv.append("--" + ".".join(prefix) + "=" + value)
-        else:
-            argv.append("--" + ".".join(prefix) + "=" + str(node))
-        return 
-    
-    for k, v in node.items():
-        prefix.append(k)
-        dfs(v, prefix)
-        prefix.pop()
-
-dfs(saved, [])
-
-configs = yaml.safe_load(open("dreamerv3/configs.yaml"))
-parsed, other = elements.Flags(configs=['defaults']).parse_known(argv)
-config = elements.Config(configs['defaults'])
-for name in parsed.configs:
-    config = config.update(configs[name])
-config = elements.Flags(config).parse(other)
-"""
 
 config = Config.load(CONFIG)
 config = elements.Flags(config).parse()
@@ -52,24 +24,24 @@ print("TRES\n\n")
 
 task = config.task.split("_")[-1]
 env = make_env(config, 0)
+print("AAAAA XD")
 
 try:
-    
     agent = Agent(
         env.obs_space,
         env.act_space,
         elements.Config(
-        **config.agent,
-        logdir=config.logdir,
-        seed=config.seed,
-        jax=config.jax,
-        batch_size=config.batch_size,
-        batch_length=config.batch_length,
-        replay_context=config.replay_context,
-        report_length=config.report_length,
-        replica=config.replica,
-        replicas=config.replicas,
-    )
+            **config.agent,
+            logdir=config.logdir,
+            seed=config.seed,
+            jax=config.jax,
+            batch_size=config.batch_size,
+            batch_length=config.batch_length,
+            replay_context=config.replay_context,
+            report_length=config.report_length,
+            replica=config.replica,
+            replicas=config.replicas,
+        )
     )
 
     print("CUATRO\n\n")
@@ -109,8 +81,9 @@ try:
 
     print("Saved original.png and reconstruction.png")
 except Exception as e:
-    print(e)
-finally:
+    env.close()
+    raise e
+else:
     env.close()
     
 
