@@ -53,59 +53,65 @@ print("TRES\n\n")
 task = config.task.split("_")[-1]
 env = make_env(config, 0)
 
-
-agent = Agent(
-    env.obs_space,
-    env.act_space,
-    elements.Config(
-      **config.agent,
-      logdir=config.logdir,
-      seed=config.seed,
-      jax=config.jax,
-      batch_size=config.batch_size,
-      batch_length=config.batch_length,
-      replay_context=config.replay_context,
-      report_length=config.report_length,
-      replica=config.replica,
-      replicas=config.replicas,
-  )
-)
-
-print("CUATRO\n\n")
-
-cp = elements.Checkpoint(CKPT)
-cp.agent = agent
-cp.load()
-
-
-print("CUATRO\n\n")
-
-obs = env.reset()
-image = obs["image"][0]           # (H,W,3)
-image = image.astype(np.uint8)
-
-wm = agent.world_model
-print("CINCO\n\n")
-
-
-@jax.jit
-def reconstruct(img):
-    embed = wm.encoder(jnp.array(img)[None])
-    state = wm.rssm.initial(1)
-    state, _ = wm.rssm.observe(
-        state, embed, jnp.zeros((1,)), jnp.zeros((1,), bool)
+try:
+    
+    agent = Agent(
+        env.obs_space,
+        env.act_space,
+        elements.Config(
+        **config.agent,
+        logdir=config.logdir,
+        seed=config.seed,
+        jax=config.jax,
+        batch_size=config.batch_size,
+        batch_length=config.batch_length,
+        replay_context=config.replay_context,
+        report_length=config.report_length,
+        replica=config.replica,
+        replicas=config.replicas,
     )
-    feat = wm.rssm.get_feat(state)
-    recon = wm.heads["image"](feat).mode()
-    return recon[0]
+    )
 
-recon = np.array(reconstruct(image))
+    print("CUATRO\n\n")
 
-print("SEIS\n\n")
+    cp = elements.Checkpoint(CKPT)
+    cp.agent = agent
+    cp.load()
 
-Image.fromarray(image).save("original.png")
-Image.fromarray(recon.astype(np.uint8)).save("reconstruction.png")
 
-print("Saved original.png and reconstruction.png")
+    print("CUATRO\n\n")
+
+    obs = env.reset()
+    image = obs["image"][0]           # (H,W,3)
+    image = image.astype(np.uint8)
+
+    wm = agent.world_model
+    print("CINCO\n\n")
+
+
+    @jax.jit
+    def reconstruct(img):
+        embed = wm.encoder(jnp.array(img)[None])
+        state = wm.rssm.initial(1)
+        state, _ = wm.rssm.observe(
+            state, embed, jnp.zeros((1,)), jnp.zeros((1,), bool)
+        )
+        feat = wm.rssm.get_feat(state)
+        recon = wm.heads["image"](feat).mode()
+        return recon[0]
+
+    recon = np.array(reconstruct(image))
+
+    print("SEIS\n\n")
+
+    Image.fromarray(image).save("original.png")
+    Image.fromarray(recon.astype(np.uint8)).save("reconstruction.png")
+
+    print("Saved original.png and reconstruction.png")
+except Exception as e:
+    print(e)
+finally:
+    env.close()
+    
 
 # python3 -m dreamerv3.seeing_with_dreamer
