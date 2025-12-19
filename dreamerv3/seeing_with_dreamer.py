@@ -51,7 +51,7 @@ config = elements.Flags(config).parse()
 print("TRES\n\n")
 
 task = config.task.split("_")[-1]
-env = make_env(config)
+env = make_env(config, 0)
 
 
 agent = Agent(
