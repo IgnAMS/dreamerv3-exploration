@@ -30,6 +30,7 @@ print("CUATRO\n\n")
 cp = elements.Checkpoint(CKPT)
 cp.agent = agent
 cp.load()
+print("CINCO")
 
 try:
     print("CUATRO\n\n")
