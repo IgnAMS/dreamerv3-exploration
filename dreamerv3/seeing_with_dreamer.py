@@ -21,6 +21,7 @@ with open(CONFIG, "r") as f:
     
 argv = []
 def dfs(node, prefix=[]):
+    print(type(node))
     if not isinstance(node, dict):
         argv.append("--" + ".".join(prefix) + "=" + str(node))
     
