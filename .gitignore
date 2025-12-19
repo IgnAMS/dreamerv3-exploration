@@ -10,3 +10,10 @@ running_command.txt
 test_observation_raw.png
 .venv
 *.DS_Store
+
+*.aux
+*.fdb_latexmk
+*.fls
+*.synctex.gz
+assessing_adaptative_WMs_in_machines.out
+assessing_adaptative_WMs_in_machines.log

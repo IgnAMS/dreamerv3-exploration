@@ -1,0 +1,163 @@
+\documentclass[11pt,a4paper]{article}
+
+% --------------------
+% Paquetes básicos
+% --------------------
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage[spanish]{babel}
+
+\usepackage{amsmath, amssymb}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{hyperref}
+\usepackage{cite}
+
+% Márgenes
+\usepackage{geometry}
+\geometry{margin=2.5cm}
+
+% Espaciado
+\usepackage{setspace}
+\onehalfspacing
+
+\title{\textbf{Resumen del Paper:}\\
+\large Curiosity-Driven Exploration by Self-supervised Prediction}
+
+\author{Ignacio Monardes}
+
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\section*{Referencia}
+\noindent
+\textbf{Autores:} Ying et al. \\
+\textbf{Título:} \textit{Assessing Adaptive World Models in Machines with Novel Games} \\
+\textbf{Conferencia/Journal:} ICML 2017 \\
+\textbf{Link:} \url{https://arxiv.org/pdf/2507.12821}
+
+\section{Motivación}
+
+Explica:
+\begin{itemize}
+    
+    \item ¿Qué problema aborda el paper?
+    Los seres humanos somos muy buenos jugando videojuegos porque entendemos los World Models mediante un world model induction. 
+    Mientras jugamos aprendemos las lógicas de los mundos de forma muy rápida. Los algoritmos no son tan buenos aprendiendo los world models.    
+
+    Se quiere medir como los agentes de WMs son capaces de ``inducir'' estos world models. 
+    Para esto, se crearon unos \textit{novel games}, de tal forma que se pueda medir que tan fácil se adaptan
+    los algoritmos a nuevos ambientes y a nuevas reglas/interacciones las cuales pueda hipotetizar y validar rápidamente.
+
+    Se sugiere que es insuficiente predecir la imagen/estado futuro para entender las mecanicas de los juegos. Los
+    mundos son dinámicos y cambian de forma constante. Por contraste, los humanos hacemos un \textit{sample efficiency}
+
+
+    \item ¿Por qué es importante?
+    
+    Esta métrica es importante ya que en la realidad vivimos en un mundo que cambia constantemente, donde 
+    hay nuevas reglas, nuevos climas, nuevos pisos, nuevas interacciones, etc. Por eso es importante
+    que si algún día queramos que los agentes interactuen en el mundo real sean capaces de poder adaptarse
+    a nuevos ambientes de forma veloz.
+
+
+
+    \item ¿Qué limitaciones tienen los enfoques previos?
+    ¨
+    Las métricas anteriores principalmente se basaban en instancias no vistas. Ahora con estos nuevos
+    ambientes se busca que el agente aprenda reglas/mecanismos que no son conocidos en un inicio. 
+    Para que el agente obtenga buenos resultados se requiere que el agente logre inferir dinámicas latentes
+    y estructuras causales. 
+
+\end{itemize}
+
+\section{Idea Principal}
+Describe la contribución central del paper en alto nivel:
+\begin{itemize}
+    \item ¿Qué proponen?
+
+    Primero, proponen que hay dos tipos de world models, los instanciados que son para instancias particulares
+    y los abstractos los cuales son más abstractos. Un ejemplo de un instanciado es un mapa de nueva york. 
+    Un ejemplo de un WM abstracto es un 
+
+    \item ¿Qué lo hace diferente a trabajos anteriores?
+\end{itemize}
+
+% --------------------
+\section{Metodología}
+% --------------------
+Explica brevemente:
+\begin{itemize}
+    \item Modelo / algoritmo principal
+
+
+    \item Componentes clave
+    
+    
+    \item Supuestos importantes
+
+
+\end{itemize}
+
+Si es necesario, puedes incluir ecuaciones:
+\begin{equation}
+    J(\theta) = \mathbb{E}_{\pi_\theta} \left[ \sum_t \gamma^t r_t \right]
+\end{equation}
+
+\section{Experimentos}
+Describe:
+\begin{itemize}
+    \item Entornos o datasets
+
+    \item Métricas usadas
+    
+    \item Baselines
+
+\end{itemize}
+
+\section{Resultados}
+Resume los resultados más importantes:
+\begin{itemize}
+    \item ¿Supera a los baselines?
+
+    \item ¿En qué escenarios funciona mejor / peor?
+
+\end{itemize}
+
+Opcional: referencia a figuras/tablas del paper.
+
+\section{Discusión Crítica}
+\begin{itemize}
+    \item Fortalezas
+
+    
+    \item Debilidades
+    
+    
+    \item Supuestos cuestionables
+    
+    
+    \item Qué no queda claro
+
+
+\end{itemize}
+
+\section{Conclusiones}
+
+\section*{Comentario Personal}
+Tu opinión:
+\begin{itemize}
+    \item ¿Te parece una buena contribución?
+
+    \item ¿La usarías en tu investigación?
+
+\end{itemize}
+
+\bibliographystyle{plain}
+\bibliography{references}
+
+\end{document}
