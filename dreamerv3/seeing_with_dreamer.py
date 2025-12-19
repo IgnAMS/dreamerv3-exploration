@@ -24,6 +24,7 @@ def dfs(node, prefix=[]):
     print(type(node))
     if not isinstance(node, dict):
         argv.append("--" + ".".join(prefix) + "=" + str(node))
+        return 
     
     for k, v in node.items():
         prefix.append(k)
