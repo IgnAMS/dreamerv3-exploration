@@ -23,7 +23,7 @@ print("TRES\n\n")
 
 task = config.task.split("_")[-1]
 env = DeterministicCookie(task=task)
-env = embodied.BatchEnv([env], parallel=False)
+# env = embodied.BatchEnv([env], parallel=False)
 
 agent = Agent(
     env.obs_space,
