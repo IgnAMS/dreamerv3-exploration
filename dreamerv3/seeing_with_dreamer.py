@@ -19,7 +19,7 @@ print("DOS\n\n")
 
 config = Config.load(CONFIG)
 config = elements.Flags(config).parse()
-config.jax.platform = "cpu"
+config.update({"jax": {"platform": "cpu"}})
 
 print("TRES\n\n")
 
