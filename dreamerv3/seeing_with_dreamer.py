@@ -17,7 +17,8 @@ CONFIG = f"{LOGDIR}/config.yaml"
 print("DOS\n\n")
 
 with open(CONFIG, "r") as f:
-    config = yaml.safe_load(f)
+    cfg_dict = yaml.safe_load(f)
+config = elements.Config(cfg_dict)
 print("TRES\n\n")
 
 env = DeterministicCookie(task=config.task)
