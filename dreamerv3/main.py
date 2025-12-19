@@ -233,6 +233,7 @@ def make_env(config, index, **overrides):
           f'MemoryMaze-{task}-v0', **kw),
       'minigrid': 'embodied.envs.new_minigrid:MiddleGoal',
       'cookiepedro': 'embodied.envs.new_minigrid:CookiePedro',
+      'cookiepedrofull': 'embodied.envs.new_minigrid:CookiePedroFull',
       'cookiepedroonehot': 'embodied.envs.new_minigrid:CookiePedroOneHot',
       'cookiepedrodeterministic': 'embodied.envs.new_minigrid:DeterministicCookie',
       'cookiepedrotwocookies': 'embodied.envs.new_minigrid:TwoCookies',

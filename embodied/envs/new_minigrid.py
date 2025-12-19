@@ -373,7 +373,24 @@ class MiddleGoal(SimpleImageEnv):
             max_steps=max_steps,
             kwargs=kwargs           
         )
-        
+
+class CookiePedroFull(SimpleImageEnv):
+    def __init__(
+        self,
+        task=None,
+        **kwargs
+    ):
+        from cookie_env.env import CookieEnv
+        super().__init__(
+            task=task,
+            make_env=CookieEnv,
+            full_obs=True,
+            rgb_img_obs="full",
+            agent_start_pos=(14, 14),
+            onehot=False,
+            max_steps=4*18*20,
+            **kwargs
+        )
 
 class CookiePedro(SimpleImageEnv):
     def __init__(
@@ -393,9 +410,6 @@ class CookiePedro(SimpleImageEnv):
             **kwargs
         )
 
-
-# TODO: Fix Cookie pedro as a new entirely different model
-# because it is not a picture!
 class CookiePedroOneHot(SimpleEnv):
     def __init__(
         self,
