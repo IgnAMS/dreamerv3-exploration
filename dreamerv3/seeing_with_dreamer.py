@@ -1,7 +1,7 @@
 import yaml
 import embodied
 from dreamerv3.agent import Agent
-from dreamerv3.main import make_agent
+from dreamerv3.main import make_agent, make_env
 import elements
 from elements import Config, Flags
 from PIL import Image
@@ -33,7 +33,7 @@ cp.load()
 
 
 print("CUATRO\n\n")
-
+env = make_env(config, 0)
 obs = env.reset()
 image = obs["image"][0]           # (H,W,3)
 image = image.astype(np.uint8)
