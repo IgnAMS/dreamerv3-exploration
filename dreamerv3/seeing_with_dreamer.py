@@ -3,6 +3,7 @@ from embodied.envs.new_minigrid import CookiePedro, DeterministicCookie
 import embodied
 from dreamerv3.agent import Agent
 import elements
+from elements import Config, Flags
 from PIL import Image
 import jax
 import jax.numpy as jnp
@@ -15,13 +16,11 @@ CKPT = f"{LOGDIR}/ckpt/agent/AAAA"
 CONFIG = f"{LOGDIR}/config.yaml"
 
 print("DOS\n\n")
-
+"""
 with open(CONFIG, "r") as f:
     saved = yaml.safe_load(f)
-    
 argv = []
 def dfs(node, prefix=[]):
-    print(type(node))
     if not isinstance(node, dict):
         if isinstance(node, list):
             value = str(node).strip("[").strip("]")
@@ -44,7 +43,10 @@ config = elements.Config(configs['defaults'])
 for name in parsed.configs:
     config = config.update(configs[name])
 config = elements.Flags(config).parse(other)
+"""
 
+config = Config.load(CONFIG)
+config = elements.Flags(config).parse()
 
 print("TRES\n\n")
 
