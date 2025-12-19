@@ -27,7 +27,18 @@ env = DeterministicCookie(task=task)
 agent = Agent(
     env.obs_space,
     env.act_space,
-    config.agent,
+    elements.Config(
+      **config.agent,
+      logdir=config.logdir,
+      seed=config.seed,
+      jax=config.jax,
+      batch_size=config.batch_size,
+      batch_length=config.batch_length,
+      replay_context=config.replay_context,
+      report_length=config.report_length,
+      replica=config.replica,
+      replicas=config.replicas,
+  )
 )
 
 print("CUATRO\n\n")
