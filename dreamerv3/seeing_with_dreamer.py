@@ -18,11 +18,12 @@ print("DOS\n\n")
 
 with open(CONFIG, "r") as f:
     cfg_dict = yaml.safe_load(f)
-parsed, other = elements.Flags(configs=['defaults']).parse_known()
+# parsed, other = elements.Flags(configs=['defaults']).parse_known()
 config = elements.Config(cfg_dict)
-for name in parsed.configs:
-    config = config.update(cfg_dict[name])
-config = elements.Flags(config).parse(other)
+config = elements.Flags(config).parse([])
+# for name in parsed.configs:
+#     config = config.update(cfg_dict[name])
+# config = elements.Flags(config).parse(other)
 print("TRES\n\n")
 
 task = config.task.split("_")[-1]
