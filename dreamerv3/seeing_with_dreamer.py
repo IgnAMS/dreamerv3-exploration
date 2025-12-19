@@ -1,42 +1,69 @@
-import os
 import yaml
-import numpy as np
+from embodied.envs.new_minigrid import CookiePedro, DeterministicCookie
+import embodied
+from dreamerv3 import Agent
+import elements
 from PIL import Image
-import orbax.checkpoint as ocp
 import jax
 import jax.numpy as jnp
-from embodied.envs.new_minigrid import CookiePedro
+import numpy as np
 
 print("UNO\n\n")
 
-CKPT_DIR = "/home/iamonardes/logdir/dreamer/cookiepedrodeterministic18x29/size12m/05/ckpt/20251219T110803F946099"
-CONFIG_YAML = "/home/iamonardes/logdir/dreamer/cookiepedrodeterministic18x29/size12m/05/config.yaml"
-OUT_PNG = "reconstruction.png"
+LOGDIR = "/home/iamonardes/logdir/dreamer/cookiepedrodeterministic18x29/size12m/05"
+CKPT = f"{LOGDIR}/ckpt/agent"
+CONFIG = f"{LOGDIR}/config.yaml"
+
 print("DOS\n\n")
 
-with open(CONFIG_YAML, "r") as f:
+with open(CONFIG, "r") as f:
     config = yaml.safe_load(f)
 print("TRES\n\n")
 
-handler = ocp.PyTreeCheckpointHandler()
-mgr = ocp.CheckpointManager(
-    CKPT_DIR,
-    handler,
-    options=ocp.CheckpointManagerOptions(max_to_keep=5)
+env = DeterministicCookie(task=config.task)
+env = embodied.BatchEnv([env], parallel=False)
+
+agent = Agent(
+    env.obs_space,
+    env.act_space,
+    config,
 )
+
 print("CUATRO\n\n")
 
-step = mgr.latest_step()
-if step is None:
-    raise RuntimeError("No checkpoint steps found in " + CKPT_DIR)
+cp = elements.Checkpoint(CKPT)
+cp.agent = agent
+cp.load()
+
+
+print("CUATRO\n\n")
+
+obs = env.reset()
+image = obs["image"][0]           # (H,W,3)
+image = image.astype(np.uint8)
+
+wm = agent.world_model
 print("CINCO\n\n")
 
-restored = mgr.restore(step)
+
+@jax.jit
+def reconstruct(img):
+    embed = wm.encoder(jnp.array(img)[None])
+    state = wm.rssm.initial(1)
+    state, _ = wm.rssm.observe(
+        state, embed, jnp.zeros((1,)), jnp.zeros((1,), bool)
+    )
+    feat = wm.rssm.get_feat(state)
+    recon = wm.heads["image"](feat).mode()
+    return recon[0]
+
+recon = np.array(reconstruct(image))
+
 print("SEIS\n\n")
 
-print("Checkpoint restored; top-level keys:", restored.keys())
-params = restored.get("model_params") or restored.get("params") or restored.get("model")
-print("example param keys:", list(params.keys())[:10])
+Image.fromarray(image).save("original.png")
+Image.fromarray(recon.astype(np.uint8)).save("reconstruction.png")
 
+print("Saved original.png and reconstruction.png")
 
 # python3 -m dreamerv3.seeing_with_dreamer
