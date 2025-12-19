@@ -19,6 +19,7 @@ print("DOS\n\n")
 with open(CONFIG, "r") as f:
     cfg_dict = yaml.safe_load(f)
 config = elements.Config(cfg_dict)
+config = elements.Flags(config).parse([])
 print("TRES\n\n")
 
 task = config.task.split("_")[-1]
