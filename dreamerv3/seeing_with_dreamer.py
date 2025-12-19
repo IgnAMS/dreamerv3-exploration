@@ -12,7 +12,7 @@ import numpy as np
 print("UNO\n\n")
 
 LOGDIR = "/home/iamonardes/logdir/dreamer/cookiepedrodeterministic18x29/size12m/05"
-CKPT = f"{LOGDIR}/ckpt/agent/"
+CKPT = f"{LOGDIR}/ckpt"
 CONFIG = f"{LOGDIR}/config.yaml"
 
 print("DOS\n\n")
