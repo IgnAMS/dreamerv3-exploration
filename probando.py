@@ -25,7 +25,8 @@ from embodied.envs.new_minigrid import (
     CookiePedro, 
     CookiePedroOneHot,
     DeterministicCookie,
-    TwoCookies
+    TwoCookies,
+    CookiePedroFull
 )
 
 # key->action mapping (MiniGrid classic)
@@ -114,7 +115,7 @@ def main():
         make_agent=CookieEnv # RawMiddlePoint
     )
     """
-    env = DeterministicCookie(
+    env = CookiePedroFull(
         task=GRID_SIZE,
         size=PIXEL_SIZE,
         resize='pillow',
