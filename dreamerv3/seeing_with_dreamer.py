@@ -21,7 +21,8 @@ with open(CONFIG, "r") as f:
 config = elements.Config(cfg_dict)
 print("TRES\n\n")
 
-env = DeterministicCookie(task=config.task)
+task = config.task.split("_")[-1]
+env = DeterministicCookie(task=task)
 env = embodied.BatchEnv([env], parallel=False)
 
 agent = Agent(
