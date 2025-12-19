@@ -17,13 +17,28 @@ CONFIG = f"{LOGDIR}/config.yaml"
 print("DOS\n\n")
 
 with open(CONFIG, "r") as f:
-    cfg_dict = yaml.safe_load(f)
-# parsed, other = elements.Flags(configs=['defaults']).parse_known()
-config = elements.Config(cfg_dict)
-config = elements.Flags(config).parse([])
-# for name in parsed.configs:
-#     config = config.update(cfg_dict[name])
-# config = elements.Flags(config).parse(other)
+    saved = yaml.safe_load(f)
+    
+argv = []
+def dfs(node, prefix=[]):
+    if not isinstance(node, dict):
+        argv.append("--" + ".".join(prefix) + "=" + str(node))
+    
+    for k, v in node.items():
+        prefix.append(k)
+        dfs(v, prefix)
+        prefix.pop()
+
+dfs(saved, [])
+
+configs = yaml.safe_load(open("dreamerv3/configs.yaml"))
+parsed, other = elements.Flags(configs=['defaults']).parse_known(argv)
+config = elements.Config(configs['defaults'])
+for name in parsed.configs:
+    config = config.update(configs[name])
+config = elements.Flags(config).parse(other)
+
+
 print("TRES\n\n")
 
 task = config.task.split("_")[-1]
