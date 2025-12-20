@@ -32,16 +32,18 @@ cp.load()
 print("CINCO")
 
 
-def reconstruct_and_save(agent, image_uint8, out_original="original.png", out_recon="reconstruction.png"):
+def reconstruct_and_save(agent, obs, out_original="original.png", out_recon="reconstruction.png"):
     """
     image_uint8: numpy array H,W,3 dtype uint8
     agent: agente ya cargado con pesos (como en tu script)
     Guarda original y reconstrucción por posterior (z_hat).
     """
      # 1) preparar inputs con batch dim
-    img = np.asarray(image_uint8)
+    img = np.asarray(obs["image"])
+    print(img.shape)
+    print(img.dtype)
     assert img.dtype == np.uint8, "image must be uint8"
-    obs = {'image': jnp.expand_dims(img, 0)}   # shape (1,H,W,3)
+    # obs = {'image': jnp.expand_dims(img, 0)}   # shape (1,H,W,3)
     reset = jnp.zeros((1,), dtype=bool)
 
      # 2) encode -> tokens
@@ -100,7 +102,7 @@ try:
     image = image.astype(np.uint8)
 
     print("CINCO\n\n")
-    reconstruct_and_save(agent, image)
+    reconstruct_and_save(agent, image, obs)
 
 except Exception as e:
     env.close()
