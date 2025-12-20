@@ -39,7 +39,7 @@ def reconstruct_and_save(agent, obs, out_original="original.png", out_recon="rec
     Guarda original y reconstrucción por posterior (z_hat).
     """
      # 1) preparar inputs con batch dim
-    img = np.asarray(obs["image"])
+    img = np.asarray(obs["image"][0])
     print(img.shape)
     print(img.dtype)
     assert img.dtype == np.uint8, "image must be uint8"
@@ -98,11 +98,9 @@ try:
     print("CUATRO\n\n")
     env = make_env(config, 0)
     obs = env.reset()
-    image = obs["image"][0]           # (H,W,3)
-    image = image.astype(np.uint8)
 
     print("CINCO\n\n")
-    reconstruct_and_save(agent, image, obs)
+    reconstruct_and_save(agent, obs)
 
 except Exception as e:
     env.close()
