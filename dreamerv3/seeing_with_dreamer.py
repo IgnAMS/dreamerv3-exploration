@@ -1,9 +1,7 @@
-import yaml
-import embodied
-from dreamerv3.agent import Agent
+from dreamerv3.agent import sample
 from dreamerv3.main import make_agent, make_env
 import elements
-from elements import Config, Flags
+from elements import Config
 from PIL import Image
 import jax
 import jax.numpy as jnp
@@ -40,19 +38,33 @@ try:
     image = obs["image"][0]           # (H,W,3)
     image = image.astype(np.uint8)
 
-    wm = agent.world_model
     print("CINCO\n\n")
 
 
     @jax.jit
     def reconstruct(img):
-        embed = wm.encoder(jnp.array(img)[None])
-        state = wm.rssm.initial(1)
-        state, _ = wm.rssm.observe(
-            state, embed, jnp.zeros((1,)), jnp.zeros((1,), bool)
+        img = jnp.array(img)[None]
+        # 1) encode
+        embed = agent.enc(img)
+        # 2) initial RSSM state
+        state = agent.dyn.initial(batch_size=1)
+        # 3) observe
+        z, z_hat = agent.dyn.observe(
+            state,
+            embed,
+            action=jnp.zeros((1, agent.act_space['action'].shape[0])),
+            reset=jnp.zeros((1,), bool),
         )
-        feat = wm.rssm.get_feat(state)
-        recon = wm.heads["image"](feat).mode()
+        carry = state
+        policyfn = lambda feat: sample(agent.dyn.pol(agent.dyn.feat2tensor(feat), 1))
+        H = config.imag_length
+        carry, (feat, action) = agent.dyn.imagine(carry, policy=policyfn, length=H, training=None, single=True)
+        z_hat = carry["stoch"]
+        
+        # 4) features → decode
+        # dyn.get_feat no existe! 
+        # feat = agent.dyn.get_feat(z_hat)
+        recon = agent.dec(feat).mode()
         return recon[0]
 
     recon = np.array(reconstruct(image))
