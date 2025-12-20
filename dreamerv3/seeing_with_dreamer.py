@@ -31,6 +31,67 @@ cp.agent = agent
 cp.load()
 print("CINCO")
 
+
+def reconstruct_and_save(agent, image_uint8, out_original="original.png", out_recon="reconstruction.png"):
+    """
+    image_uint8: numpy array H,W,3 dtype uint8
+    agent: agente ya cargado con pesos (como en tu script)
+    Guarda original y reconstrucción por posterior (z_hat).
+    """
+     # 1) preparar inputs con batch dim
+    img = np.asarray(image_uint8)
+    assert img.dtype == np.uint8, "image must be uint8"
+    obs = {'image': jnp.expand_dims(img, 0)}   # shape (1,H,W,3)
+    reset = jnp.zeros((1,), dtype=bool)
+
+     # 2) encode -> tokens
+    # encoder usually tiene signature: carry, entries, tokens = enc(carry, obs, reset, training, single=True)
+    enc_carry = agent.enc.initial(1)   # según Encoder.initial en tu código esto devuelve {}
+    enc_carry, _, tokens = agent.enc(enc_carry, obs, reset, training=False, single=True)
+    # tokens : shape (1, token_dim)
+    
+    # 3) inicializar RSSM y observar
+    state = agent.dyn.initial(1)
+    action_zeros = jnp.zeros((1, agent.act_space['action'].shape[0]))
+    carry, entry, feat = agent.dyn.observe(
+        state,
+        tokens,
+        action=action_zeros,
+        reset=reset,
+        training=False,
+        single=True,
+    )
+    
+    # 4) Obtener el prior y el hat{z}
+    # política dummy (acción cero)
+    policyfn = lambda feat: sample(agent.dyn.pol(agent.dyn.feat2tensor(feat), 1))
+
+    carry_prior, (feat_prior, action) = agent.dyn.imagine(
+        carry,
+        policy=policyfn,
+        length=1,
+        training=False,
+        single=True,
+    )
+    
+    # 4) decodificar desde el carry (prior)
+    dec_carry = agent.dec.initial(1)
+    dec_carry, _, recons = agent.dec(
+        dec_carry,
+        feat_prior,
+        reset,
+        training=False,
+        single=True,
+    )
+
+    recon = recons['image'].mode()[0]      # [0,1]
+    recon = (recon * 255).astype(np.uint8)
+    
+    # guardar
+    Image.fromarray(img).save(out_original)
+    Image.fromarray(recon).save(out_recon)
+
+
 try:
     print("CUATRO\n\n")
     env = make_env(config, 0)
@@ -39,38 +100,8 @@ try:
     image = image.astype(np.uint8)
 
     print("CINCO\n\n")
+    reconstruct_and_save(agent, image)
 
-
-    @jax.jit
-    def reconstruct(img):
-        img = jnp.array(img)[None]
-        # 1) encode
-        embed = agent.enc(img)
-        # 2) initial RSSM state
-        state = agent.dyn.initial(batch_size=1)
-        # 3) observe
-        z, z_hat = agent.dyn.observe(
-            state,
-            embed,
-            action=jnp.zeros((1, agent.act_space['action'].shape[0])),
-            reset=jnp.zeros((1,), bool),
-        )
-        carry = state
-        policyfn = lambda feat: sample(agent.dyn.pol(agent.dyn.feat2tensor(feat), 1))
-        H = config.imag_length
-        carry, (feat, action) = agent.dyn.imagine(carry, policy=policyfn, length=H, training=None, single=True)
-        z_hat = carry["stoch"]
-        
-        # 4) features → decode
-        # dyn.get_feat no existe! 
-        # feat = agent.dyn.get_feat(z_hat)
-        recon = agent.dec(feat).mode()
-        return recon[0]
-
-    recon = np.array(reconstruct(image))
-
-    Image.fromarray(image).save("original.png")
-    Image.fromarray(recon.astype(np.uint8)).save("reconstruction.png")
 except Exception as e:
     env.close()
     raise e
