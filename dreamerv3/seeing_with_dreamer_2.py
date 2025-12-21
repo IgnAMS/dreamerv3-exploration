@@ -119,10 +119,12 @@ def make_save_callback(agent, driver, out_dir="dreamer_prior_images"):
             Image.fromarray(img_np).save(orig_path)
 
             # reconstrucción desde prior
-            recon_img = reconstruct_from_prior(agent, driver, img_np, reset)
-            recon_path = os.path.join(out_dir, f"prior_{uid}.png")
-            Image.fromarray(recon_img).save(recon_path)
-
+            try: 
+                recon_img = reconstruct_from_prior(agent, driver, img_np, reset)
+                recon_path = os.path.join(out_dir, f"prior_{uid}.png")
+                Image.fromarray(recon_img).save(recon_path)
+            except Exception as e:
+                print("error en on step:", e)
             # opcional: imprime ruta
             print(f"Saved original -> {orig_path}; prior -> {recon_path}")
         else:
@@ -155,7 +157,7 @@ if __name__ == "__main__":
     driver = Driver(fns, parallel=not args.debug)
 
     # registra callbacks:
-    save_cb = make_save_callback(agent, out_dir="dreamer_prior_images")
+    save_cb = make_save_callback(agent, driver, out_dir="dreamer_prior_images")
     driver.on_step(save_cb)
 
     driver.reset(agent.init_policy)
