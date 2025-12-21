@@ -55,17 +55,10 @@ def describe(x):
     }
 
 @nj.pure
-def imagine_step(agent, rssm_state):
-    policyfn = lambda feat: sample(
-        agent.model.pol(agent.model.feat2tensor(feat), 1)
-    )
-    return agent.model.dyn.imagine(
-        rssm_state,
-        policy=policyfn,
-        length=1,
-        training=False,
-        single=True,
-    )
+def sample_prior(agent, deter):
+    logit = agent.model.dyn._prior(deter)
+    z_hat = agent.model.dyn._dist(logit).sample(seed=nj.seed())
+    return z_hat, logit
 
 def reconstruct_from_prior(agent, driver, image_np, reset):
     """
@@ -83,11 +76,8 @@ def reconstruct_from_prior(agent, driver, image_np, reset):
     policyfn = lambda feat: sample(agent.model.pol(agent.model.feat2tensor(feat), 1))
     print("carry:", jax.tree.map(describe, driver.carry))
     dyn_carry = driver.carry[1]
-    rssm_state = {
-        'deter': dyn_carry['deter'][0],
-        'stoch': dyn_carry['stoch'][0],
-    }
-    carry_prior, (feat_prior, action) = imagine_step(agent, rssm_state)
+    h_t = dyn_carry['deter'][0]
+    carry_prior, (feat_prior, action) = sample_prior(agent, h_t)
 
     # 4) decodificar desde feat_prior
     dec_carry = agent.model.dec.initial(1)
