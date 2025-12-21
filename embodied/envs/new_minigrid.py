@@ -203,6 +203,7 @@ class SimpleImageEnv(SimpleEnv):
             """
             obs, info = raw.reset()
             image_data = obs["image"]
+            print(image_data.shape)
             img = Image.fromarray(image_data)
             filename = "test_observation_raw.png"
             img.save(filename)
