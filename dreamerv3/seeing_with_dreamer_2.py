@@ -55,7 +55,7 @@ def describe(x):
     }
 
 @nj.pure
-def imagine_step(rssm_state):
+def imagine_step(agent, rssm_state):
     policyfn = lambda feat: sample(
         agent.model.pol(agent.model.feat2tensor(feat), 1)
     )
@@ -87,7 +87,7 @@ def reconstruct_from_prior(agent, driver, image_np, reset):
         'deter': dyn_carry['deter'][0],
         'stoch': dyn_carry['stoch'][0],
     }
-    carry_prior, (feat_prior, action) = imagine_step(rssm_state)
+    carry_prior, (feat_prior, action) = imagine_step(agent, rssm_state)
 
     # 4) decodificar desde feat_prior
     dec_carry = agent.model.dec.initial(1)
