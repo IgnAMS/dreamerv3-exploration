@@ -39,11 +39,7 @@ def reconstruct_and_save(agent, obs, out_original="original.png", out_recon="rec
     Guarda original y reconstrucción por posterior (z_hat).
     """
      # 1) preparar inputs con batch dim
-    img = np.asarray(obs["image"][0])
-    print(img.shape)
-    print(img.dtype)
-    assert img.dtype == np.uint8, "image must be uint8"
-    # obs = {'image': jnp.expand_dims(img, 0)}   # shape (1,H,W,3)
+    img = np.asarray(obs["image"])
     reset = jnp.zeros((1,), dtype=bool)
 
      # 2) encode -> tokens
