@@ -161,7 +161,7 @@ def make_save_callback(agent, out_dir="dreamer_prior_images"):
 
 if __name__ == "__main__":
     # crea el env y el driver
-    fns = [bind(make_env, 0)]
+    fns = [bind(bind(make_env, config), 0)]
     driver = Driver(fns, parallel=False)
 
     # registra callbacks:
@@ -188,3 +188,6 @@ if __name__ == "__main__":
             driver.run(steps=N_STEPS)
         except Exception as e:
             print("Ajusta la llamada a driver.run según tu versión de embodied.core.driver. Error:", e)
+
+
+# python3 -m dreamerv3.seeing_with_dreamer_2
