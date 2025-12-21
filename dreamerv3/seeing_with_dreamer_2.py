@@ -59,7 +59,7 @@ def reconstruct_from_prior(agent, driver, image_np, reset):
         img = img.astype(np.uint8)
     
     # 1) muestrear PRIOR via imagine (policy dummy)
-    policyfn = lambda c: sample(agent.model.dyn.pol(agent.model.dyn.feat2tensor(c), 1))
+    policyfn = lambda feat: sample(agent.model.pol(agent.model.feat2tensor(feat), 1))
     carry_prior, (feat_prior, action) = agent.model.dyn.imagine(
         driver.carry,
         policy=policyfn,
