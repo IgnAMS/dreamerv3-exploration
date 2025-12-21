@@ -56,16 +56,16 @@ def reconstruct_from_prior(agent, image_np):
         img = img.astype(np.uint8)
 
     # arma obs para el encoder (batch dim 1)
-    obs = {'image': jnp.asarray(img, dtype=jnp.uint8)[None]}
-    reset = jnp.array([False], dtype=jnp.bool_)   # use jnp.bool_ explícito
+    obs = {'image': jax.device_put(img[None])}
 
+    reset = jax.device_put(np.array([False], dtype=np.bool_))
     # 1) encode (siguiendo la API del Encoder en tu arquitectura)
     enc_carry = agent.enc.initial(1)
     enc_carry, _, tokens = agent.enc(enc_carry, obs, reset, training=False, single=True)
 
     # 2) inicializar RSSM y observar (obtener carry/h_t)
     state = agent.dyn.initial(1)
-    action_zeros = jnp.zeros((1, agent.act_space['action'].shape[0]))
+    action_zeros = jax.device_put(np.zeros((1, agent.act_space['action'].shape[0]), np.float32))
     carry, entry, feat_post = agent.dyn.observe(
         state,
         tokens,
