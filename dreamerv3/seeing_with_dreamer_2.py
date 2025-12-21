@@ -45,6 +45,14 @@ cp.agent = agent
 cp.load()
 print("CINCO")
 
+def describe(x):
+    return {
+        'type': type(x).__name__,
+        'shape': getattr(x, 'shape', None),
+        'dtype': getattr(x, 'dtype', None),
+        'device': getattr(x, 'device', None),
+    }
+
 
 def reconstruct_from_prior(agent, driver, image_np, reset):
     """
@@ -60,7 +68,7 @@ def reconstruct_from_prior(agent, driver, image_np, reset):
     
     # 1) muestrear PRIOR via imagine (policy dummy)
     policyfn = lambda feat: sample(agent.model.pol(agent.model.feat2tensor(feat), 1))
-    print("carry:", driver.carry)
+    print("carry:", jax.tree.map(describe, driver.carry))
     carry_prior, (feat_prior, action) = agent.model.dyn.imagine(
         driver.carry,
         policy=policyfn,
