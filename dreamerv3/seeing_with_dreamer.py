@@ -98,9 +98,10 @@ try:
     print("CUATRO\n\n")
     env = make_env(config, 0)
     obs = env.reset()
-
+    print(obs["image"].shape)
     print("CINCO\n\n")
     reconstruct_and_save(agent, obs)
+    
 
 except Exception as e:
     env.close()
