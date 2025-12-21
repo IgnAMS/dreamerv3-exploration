@@ -69,7 +69,7 @@ def reconstruct_from_prior(agent, driver, image_np, reset):
     # 1) muestrear PRIOR via imagine (policy dummy)
     policyfn = lambda feat: sample(agent.model.pol(agent.model.feat2tensor(feat), 1))
     print("carry:", jax.tree.map(describe, driver.carry))
-    _, dyn_carry, _ = driver.carry
+    dyn_carry = driver.carry[1]
     rssm_state = {
         'deter': dyn_carry['deter'][0],
         'stoch': dyn_carry['stoch'][0],
