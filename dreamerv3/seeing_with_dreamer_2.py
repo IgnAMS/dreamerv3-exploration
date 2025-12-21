@@ -168,26 +168,27 @@ if __name__ == "__main__":
     save_cb = make_save_callback(agent, out_dir="dreamer_prior_images")
     driver.on_step(save_cb)
 
-    # si quieres además filtrar y escribir al replay (tu ejemplo)
-    # asegurate de tener filtered_replay y replay definidos; aquí un lambda ejemplo:
-    # driver.on_step(lambda tran, _: filtered_replay(replay, agent.spaces.keys(), tran))
+    args = elements.Config(
+        **config.run,
+        replica=config.replica,
+        replicas=config.replicas,
+        logdir=config.logdir,
+        batch_size=config.batch_size,
+        batch_length=config.batch_length,
+        report_length=config.report_length,
+        consec_train=config.consec_train,
+        consec_report=config.consec_report,
+        replay_context=config.replay_context,
+    )
+    policy = lambda *args: agent.policy(*args, mode='train')
+    TOTAL_STEPS = 300
+    STEP_CHUNK = 10
+    step = 0
 
-    # ejecutar el driver: la firma exacta puede variar según tu versión de Driver.
-    # En la versión original: driver.run(policy, steps) o driver.run(policy, episodes).
-    # Aquí asumimos que tienes una función policy que envía acciones y actualiza carry.
-    # Si ya tienes un "policy wrapper" (ej. agent.eval) pásalo.
-    try:
-        # ejemplo genérico: corre N steps; adapta a tu API real
-        N_STEPS = 500
-        # many Driver implementations expect a policy function; si el tuyo ya maneja internamente
-        # el loop, usa driver.run(...) según tu API. Aquí solo muestro una llamada posible:
-        driver.run(lambda *a, **k: None, steps=N_STEPS)  # <-- reemplaza por tu policy
-    except TypeError:
-        # fallback simple: si driver.run no acepta el lambda placeholder, intenta sin args
-        try:
-            driver.run(steps=N_STEPS)
-        except Exception as e:
-            print("Ajusta la llamada a driver.run según tu versión de embodied.core.driver. Error:", e)
+    while step < TOTAL_STEPS:
+        driver(policy, steps=STEP_CHUNK)
+        step += STEP_CHUNK
 
-
+    
+    
 # python3 -m dreamerv3.seeing_with_dreamer_2
