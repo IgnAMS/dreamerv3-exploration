@@ -11,6 +11,7 @@ from functools import partial as bind
 import time
 import uuid
 import os
+import ninjax as nj
 
 # Driver import (embodied)
 from embodied.core.driver import Driver   # ajusta la import si tu repo lo organiza distinto
@@ -53,6 +54,18 @@ def describe(x):
         'device': getattr(x, 'device', None),
     }
 
+@nj.pure
+def imagine_step(rssm_state):
+    policyfn = lambda feat: sample(
+        agent.model.pol(agent.model.feat2tensor(feat), 1)
+    )
+    return agent.model.dyn.imagine(
+        rssm_state,
+        policy=policyfn,
+        length=1,
+        training=False,
+        single=True,
+    )
 
 def reconstruct_from_prior(agent, driver, image_np, reset):
     """
@@ -74,13 +87,7 @@ def reconstruct_from_prior(agent, driver, image_np, reset):
         'deter': dyn_carry['deter'][0],
         'stoch': dyn_carry['stoch'][0],
     }
-    carry_prior, (feat_prior, action) = agent.model.dyn.imagine(
-        rssm_state,
-        policy=policyfn,
-        length=1,
-        training=False,
-        single=True,
-    )
+    carry_prior, (feat_prior, action) = imagine_step(rssm_state)
 
     # 4) decodificar desde feat_prior
     dec_carry = agent.model.dec.initial(1)
