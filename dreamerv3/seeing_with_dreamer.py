@@ -40,7 +40,7 @@ def reconstruct_and_save(agent, obs, out_original="original.png", out_recon="rec
     """
      # 1) preparar inputs con batch dim
     img = np.asarray(obs["image"])
-    reset = jnp.zeros((1,), dtype=bool)
+    reset = jnp.zeros((1,), dtype=jnp.bool_)
 
      # 2) encode -> tokens
     # encoder usually tiene signature: carry, entries, tokens = enc(carry, obs, reset, training, single=True)
