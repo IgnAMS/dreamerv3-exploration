@@ -70,7 +70,7 @@ def reconstruct_from_prior(agent, driver, image_np, reset):
     policyfn = lambda feat: sample(agent.model.pol(agent.model.feat2tensor(feat), 1))
     print("carry:", jax.tree.map(describe, driver.carry))
     carry_prior, (feat_prior, action) = agent.model.dyn.imagine(
-        driver.carry,
+        driver.carry[1],
         policy=policyfn,
         length=1,
         training=False,
