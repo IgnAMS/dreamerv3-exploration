@@ -59,8 +59,8 @@ def reconstruct_from_prior(agent, driver, image_np, reset):
         img = img.astype(np.uint8)
     
     # 1) muestrear PRIOR via imagine (policy dummy)
-    policyfn = lambda c: sample(agent.dyn.pol(agent.dyn.feat2tensor(c), 1))
-    carry_prior, (feat_prior, action) = agent.dyn.imagine(
+    policyfn = lambda c: sample(agent.model.dyn.pol(agent.model.dyn.feat2tensor(c), 1))
+    carry_prior, (feat_prior, action) = agent.model.dyn.imagine(
         driver.carry,
         policy=policyfn,
         length=1,
@@ -69,8 +69,8 @@ def reconstruct_from_prior(agent, driver, image_np, reset):
     )
 
     # 4) decodificar desde feat_prior
-    dec_carry = agent.dec.initial(1)
-    dec_carry, _, recons = agent.dec(dec_carry, feat_prior, reset, training=False, single=True)
+    dec_carry = agent.model.dec.initial(1)
+    dec_carry, _, recons = agent.model.dec(dec_carry, feat_prior, reset, training=False, single=True)
 
     # Extra: en tu setup recons['image'] puede ser un objeto de salida
     if 'image' not in recons:
@@ -104,31 +104,28 @@ def make_save_callback(agent, driver, out_dir="dreamer_prior_images"):
             return  # nada que hacer
 
         # si viene con batch dim (B,H,W,C) tomar primer elemento
-        if isinstance(img, np.ndarray):
-            if img.ndim == 4:
-                img_np = img[0]
-            elif img.ndim == 3:
-                img_np = img
-            else:
-                # intenta convertir object -> np
-                img_np = np.asarray(img)
-            
-            # guarda original con timestamp/uuid para no sobreescribir
-            uid = f"{int(time.time())}_{uuid.uuid4().hex[:8]}"
-            orig_path = os.path.join(out_dir, f"orig_{uid}.png")
-            Image.fromarray(img_np).save(orig_path)
-
-            # reconstrucción desde prior
-            try: 
-                recon_img = reconstruct_from_prior(agent, driver, img_np, reset)
-                recon_path = os.path.join(out_dir, f"prior_{uid}.png")
-                Image.fromarray(recon_img).save(recon_path)
-            except Exception as e:
-                print("error en on step:", e)
-            # opcional: imprime ruta
-            print(f"Saved original -> {orig_path}; prior -> {recon_path}")
+        if img.ndim == 4:
+            img_np = img[0]
+        elif img.ndim == 3:
+            img_np = img
         else:
-            print("pi pi pi")
+            # intenta convertir object -> np
+            img_np = np.asarray(img)
+        
+        # guarda original con timestamp/uuid para no sobreescribir
+        uid = f"{int(time.time())}_{uuid.uuid4().hex[:8]}"
+        orig_path = os.path.join(out_dir, f"orig_{uid}.png")
+        Image.fromarray(img_np).save(orig_path)
+
+        # reconstrucción desde prior
+        try: 
+            recon_img = reconstruct_from_prior(agent, driver, img_np, reset)
+            recon_path = os.path.join(out_dir, f"prior_{uid}.png")
+            Image.fromarray(recon_img).save(recon_path)
+            print(f"Saved original -> {orig_path}; prior -> {recon_path}")
+        except Exception as e:
+            print("error en on step:", e)
+        # opcional: imprime ruta
 
     return on_step
 
