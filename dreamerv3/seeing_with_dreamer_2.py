@@ -7,6 +7,7 @@ from PIL import Image
 import jax
 import jax.numpy as jnp
 import numpy as np
+from functools import partial as bind
 import time
 import uuid
 import os
@@ -160,8 +161,8 @@ def make_save_callback(agent, out_dir="dreamer_prior_images"):
 
 if __name__ == "__main__":
     # crea el env y el driver
-    env = make_env(config, 0)
-    driver = Driver(env)   # si tu Driver requiere logger u otros args, pásalos aquí
+    fns = [bind(make_env, 0)]
+    driver = Driver(fns, parallel=False)
 
     # registra callbacks:
     save_cb = make_save_callback(agent, out_dir="dreamer_prior_images")
@@ -187,5 +188,3 @@ if __name__ == "__main__":
             driver.run(steps=N_STEPS)
         except Exception as e:
             print("Ajusta la llamada a driver.run según tu versión de embodied.core.driver. Error:", e)
-
-    env.close()
