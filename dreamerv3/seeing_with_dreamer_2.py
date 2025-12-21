@@ -74,6 +74,8 @@ def reconstruct_from_prior(agent, driver, image_np, reset):
 
     # Extra: en tu setup recons['image'] puede ser un objeto de salida
     if 'image' not in recons:
+        print("BBB")
+        
         # si el key no es 'image', intenta tomar la primera key disponible
         keys = list(recons.keys())
         if not keys:
@@ -81,6 +83,7 @@ def reconstruct_from_prior(agent, driver, image_np, reset):
         k = keys[0]
         reconstructed = recons[k].mode()[0]
     else:
+        print("AAA")
         reconstructed = recons['image'].mode()[0]
 
     # reconstructed está en [0,1] float -> escala a uint8
