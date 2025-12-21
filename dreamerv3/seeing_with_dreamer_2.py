@@ -35,6 +35,9 @@ print("TRES\n\n")
 task = config.task.split("_")[-1]
 agent = make_agent(config)
 
+print(type(agent))
+print(dir(agent))
+
 print("CUATRO\n\n")
 
 cp = elements.Checkpoint(CKPT)
@@ -43,7 +46,7 @@ cp.load()
 print("CINCO")
 
 
-def reconstruct_from_prior(agent, image_np):
+def reconstruct_from_prior(agent, driver, image_np, reset):
     """
     Toma una imagen numpy H,W,3 (uint8) y devuelve la reconstrucción
     a partir del prior (hat{z}) como numpy uint8 H,W,3.
@@ -54,31 +57,11 @@ def reconstruct_from_prior(agent, image_np):
     assert img.ndim == 3 and img.shape[-1] == 3, f"Esperaba (H,W,3), recibí {img.shape}"
     if img.dtype != np.uint8:
         img = img.astype(np.uint8)
-
-    # arma obs para el encoder (batch dim 1)
-    obs = {'image': jax.device_put(img[None])}
-
-    reset = jax.device_put(np.array([False], dtype=np.bool_))
-    # 1) encode (siguiendo la API del Encoder en tu arquitectura)
-    enc_carry = agent.enc.initial(1)
-    enc_carry, _, tokens = agent.enc(enc_carry, obs, reset, training=False, single=True)
-
-    # 2) inicializar RSSM y observar (obtener carry/h_t)
-    state = agent.dyn.initial(1)
-    action_zeros = jax.device_put(np.zeros((1, agent.act_space['action'].shape[0]), np.float32))
-    carry, entry, feat_post = agent.dyn.observe(
-        state,
-        tokens,
-        action=action_zeros,
-        reset=reset,
-        training=False,
-        single=True,
-    )
-
-    # 3) muestrear PRIOR via imagine (policy dummy)
+    
+    # 1) muestrear PRIOR via imagine (policy dummy)
     policyfn = lambda c: sample(agent.dyn.pol(agent.dyn.feat2tensor(c), 1))
     carry_prior, (feat_prior, action) = agent.dyn.imagine(
-        carry,
+        driver.carry,
         policy=policyfn,
         length=1,
         training=False,
@@ -105,7 +88,7 @@ def reconstruct_from_prior(agent, image_np):
     return recon_img
 
 
-def make_save_callback(agent, out_dir="dreamer_prior_images"):
+def make_save_callback(agent, driver, out_dir="dreamer_prior_images"):
     os.makedirs(out_dir, exist_ok=True)
 
     def on_step(tran, _):
@@ -114,47 +97,36 @@ def make_save_callback(agent, out_dir="dreamer_prior_images"):
         tran: transición (dict) - puede contener arrays con batch dim o single
         _
         """
-        try:
-            # extraer la imagen del transition
-            img = tran.get('image', None)
-            if img is None:
-                return  # nada que hacer
+        # extraer la imagen del transition
+        img = tran.get('image', None)
+        reset = tran.get("reset", None)
+        if img is None:
+            return  # nada que hacer
 
-            # si viene con batch dim (B,H,W,C) tomar primer elemento
-            if isinstance(img, np.ndarray):
-                if img.ndim == 4:
-                    img_np = img[0]
-                elif img.ndim == 3:
-                    img_np = img
-                else:
-                    # intenta convertir object -> np
-                    img_np = np.asarray(img)
+        # si viene con batch dim (B,H,W,C) tomar primer elemento
+        if isinstance(img, np.ndarray):
+            if img.ndim == 4:
+                img_np = img[0]
+            elif img.ndim == 3:
+                img_np = img
             else:
-                # si viene como jax array, pasar a numpy
-                try:
-                    img_np = np.asarray(img)
-                    if img_np.ndim == 4:
-                        img_np = img_np[0]
-                except Exception:
-                    return
-
+                # intenta convertir object -> np
+                img_np = np.asarray(img)
+            
             # guarda original con timestamp/uuid para no sobreescribir
             uid = f"{int(time.time())}_{uuid.uuid4().hex[:8]}"
             orig_path = os.path.join(out_dir, f"orig_{uid}.png")
             Image.fromarray(img_np).save(orig_path)
 
             # reconstrucción desde prior
-            recon_img = reconstruct_from_prior(agent, img_np)
+            recon_img = reconstruct_from_prior(agent, driver, img_np, reset)
             recon_path = os.path.join(out_dir, f"prior_{uid}.png")
             Image.fromarray(recon_img).save(recon_path)
 
             # opcional: imprime ruta
             print(f"Saved original -> {orig_path}; prior -> {recon_path}")
-
-        except Exception as e:
-            # no queremos que un error en la callback rompa el driver loop
-            print("Error en on_step callback:", e)
-            return
+        else:
+            print("pi pi pi")
 
     return on_step
 
