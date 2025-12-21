@@ -128,6 +128,7 @@ def make_save_callback(agent, driver, out_dir="dreamer_prior_images"):
             print(f"Saved original -> {orig_path}; prior -> {recon_path}")
         except Exception as e:
             print("error en on step:", e)
+            raise e
         # opcional: imprime ruta
 
     return on_step
