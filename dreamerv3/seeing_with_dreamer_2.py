@@ -160,14 +160,6 @@ def make_save_callback(agent, out_dir="dreamer_prior_images"):
 
 
 if __name__ == "__main__":
-    # crea el env y el driver
-    fns = [bind(bind(make_env, config), 0)]
-    driver = Driver(fns, parallel=False)
-
-    # registra callbacks:
-    save_cb = make_save_callback(agent, out_dir="dreamer_prior_images")
-    driver.on_step(save_cb)
-
     args = elements.Config(
         **config.run,
         replica=config.replica,
@@ -184,7 +176,17 @@ if __name__ == "__main__":
     TOTAL_STEPS = 300
     STEP_CHUNK = 10
     step = 0
+    
+    # crea el env y el driver
+    print("Creando ambiente")
+    fns = [bind(bind(make_env, config), 0)]
+    driver = Driver(fns, parallel=not args.debug)
 
+    # registra callbacks:
+    save_cb = make_save_callback(agent, out_dir="dreamer_prior_images")
+    driver.on_step(save_cb)
+
+    driver.reset(agent.init_policy)
     while step < TOTAL_STEPS:
         driver(policy, steps=STEP_CHUNK)
         step += STEP_CHUNK
