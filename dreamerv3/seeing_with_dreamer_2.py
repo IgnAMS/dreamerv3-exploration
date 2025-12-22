@@ -1,6 +1,7 @@
 # seeing_with_driver.py
 from dreamerv3.agent import sample
-from dreamerv3.main import make_agent, make_env
+from dreamerv3.main import make_agent, make_env, make_replay, make_stream
+from embodied.run.train import filtered_replay
 import elements
 from elements import Config
 from PIL import Image
@@ -30,6 +31,8 @@ print("DOS\n\n")
 config = Config.load(CONFIG)
 config = elements.Flags(config).parse()
 config.update({"jax": {"platform": "cpu"}})
+config.update({"script": "eval_only"})
+config.update({"logdir": "report"})
 
 print("TRES\n\n")
 
@@ -163,14 +166,27 @@ if __name__ == "__main__":
     driver = Driver(fns, parallel=not args.debug)
 
     # registra callbacks:
-    save_cb = make_save_callback(agent, driver, out_dir="dreamer_prior_images")
-    driver.on_step(save_cb)
+    # save_cb = make_save_callback(agent, driver, out_dir="dreamer_prior_images")
+    # driver.on_step(save_cb)
 
     driver.reset(agent.init_policy)
+    
+    # report:
+    driver.on_step(lambda tran, _: step.increment())
+    replay = make_replay(config, "report", mode='eval_replay')
+    
+    driver.on_step(lambda tran, _: filtered_replay(replay, agent.spaces.keys(), tran))
+    carry_report = agent.init_report(args.batch_size)
+    stream_train = iter(agent.stream(make_stream(config, replay, 'eval_replay')))
+    stream_report = iter(agent.stream(make_stream(config, replay, 'eval_replay')))
+    
     while step < TOTAL_STEPS:
         driver(policy, steps=STEP_CHUNK)
         step += STEP_CHUNK
-
-    
+        
+        agg = elements.Agg()
+        for _ in range(args.consec_report * args.report_batches):
+            carry_report, mets = agent.report(carry_report, next(stream_report))
+            agg.add(mets)    
     
 # python3 -m dreamerv3.seeing_with_dreamer_2
