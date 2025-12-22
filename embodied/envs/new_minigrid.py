@@ -389,7 +389,7 @@ class CookiePedroFull(SimpleImageEnv):
             rgb_img_obs="full",
             agent_start_pos=(14, 14),
             onehot=False,
-            max_steps=4*18*20,
+            max_steps=4*18*29,
             **kwargs
         )
 
@@ -407,7 +407,7 @@ class CookiePedro(SimpleImageEnv):
             rgb_img_obs="partial",
             agent_start_pos=(14, 14),
             onehot=False,
-            max_steps=4*18*20,
+            max_steps=4*18*29,
             **kwargs
         )
 
@@ -423,7 +423,7 @@ class CookiePedroOneHot(SimpleEnv):
             make_env=CookieEnv,
             agent_start_pos=(14, 14),
             onehot=True,
-            max_steps=4*18*20,
+            max_steps=4*18*29,
             **kwargs
         )
         
@@ -443,7 +443,7 @@ class DeterministicCookie(SimpleImageEnv):
             full_obs=False,
             rgb_img_obs="partial",
             onehot=False,
-            max_steps=4*18*20,
+            max_steps=4*18*29,
             **kwargs,
         )
 
