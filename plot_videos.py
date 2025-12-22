@@ -31,7 +31,7 @@ with open(METRICS_PATH, "r") as f:
 
             try:
                 arr = np.array(value, dtype=np.uint8)
-            except Exception:
+            except Exception as e:
                 print("exception: ", e)
                 continue
 
