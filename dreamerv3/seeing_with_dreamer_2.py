@@ -60,20 +60,14 @@ def sample_prior(agent, deter):
     z_hat = agent.model.dyn._dist(logit).sample(seed=nj.seed())
     return z_hat, logit
 
+
 def reconstruct_from_prior(agent, driver, image_np, reset):
-    """
-    Toma una imagen numpy H,W,3 (uint8) y devuelve la reconstrucción
-    a partir del prior (hat{z}) como numpy uint8 H,W,3.
-    No usa @jax.jit para evitar problemas host->device.
-    """
-    # Validaciones / normalizaciones
     img = np.asarray(image_np)
     assert img.ndim == 3 and img.shape[-1] == 3, f"Esperaba (H,W,3), recibí {img.shape}"
     if img.dtype != np.uint8:
         img = img.astype(np.uint8)
     
-    # 1) muestrear PRIOR via imagine (policy dummy)
-    policyfn = lambda feat: sample(agent.model.pol(agent.model.feat2tensor(feat), 1))
+    # 1) Usar el prior
     print("carry:", jax.tree.map(describe, driver.carry))
     dyn_carry = driver.carry[1]
     h_t = dyn_carry['deter'][0]
