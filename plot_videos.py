@@ -3,7 +3,7 @@ import os
 import numpy as np
 import imageio.v2 as imageio
 
-METRICS_PATH = "/home/iamonardes/logdir/dreamer/cookiepedrodeterministic18x29/size12m/06/metrics.jsonl"
+METRICS_PATH = "/home/iamonardes/logdir/dreamer/cookiepedrofull18x29/size12m/02/metrics.jsonl"
 OUTDIR = "videos_out"
 
 os.makedirs(OUTDIR, exist_ok=True)
