@@ -19,20 +19,24 @@ def is_video(x):
     )
 
 with open(METRICS_PATH, "r") as f:
+    print("abierto el file :)")
     for idx, line in enumerate(f):
         entry = json.loads(line)
         step = entry.get("step", idx)
 
         for key, value in entry.items():
+            print(key)
             if not key.startswith("openloop/"):
                 continue
 
             try:
                 arr = np.array(value, dtype=np.uint8)
             except Exception:
+                print("exception: ", e)
                 continue
 
             if arr.ndim != 4:
+                print(f"arrr.ndim: {arr.ndim}")
                 continue
 
             # Nombre limpio
