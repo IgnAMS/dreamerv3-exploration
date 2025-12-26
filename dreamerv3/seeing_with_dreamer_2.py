@@ -22,7 +22,7 @@ from embodied.core.driver import Driver   # ajusta la import si tu repo lo organ
 
 print("UNO\n\n")
 
-LOGDIR = "/home/iamonardes/logdir/dreamer/cookiepedrodeterministic18x29/size12m/05"
+LOGDIR = "/home/iamonardes/logdir/dreamer/cookiepedrofull18x29/size12m/02"
 CKPT = f"{LOGDIR}/ckpt"
 CONFIG = f"{LOGDIR}/config.yaml"
 
