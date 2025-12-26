@@ -110,15 +110,14 @@ def reconstruct_from_prior(agent, driver, image_np, reset):
     # 1) Usar el prior
     print("carry:", jax.tree.map(describe, driver.carry))
     dyn_carry = driver.carry[1]
-    h_t = dyn_carry['deter'][0]
-    state = {}
-    state, img_dev = agent.prior_decode(dyn_carry)
+    # h_t = dyn_carry['deter'][0]
+    _, img_dev = agent.prior_decode(dyn_carry)
     
     # traer a host
     img = np.array(jax.device_get(img_dev))
     img = (img * 255).clip(0, 255).astype(np.uint8)
 
-    recon_img = Image.fromarray(img) # .save("prior.png")
+    # recon_img = Image.fromarray(img) # .save("prior.png")
 
     return img
 

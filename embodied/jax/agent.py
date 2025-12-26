@@ -164,6 +164,15 @@ class Agent(embodied.Agent):
         single_output=False,
         **shared_kwargs
     )
+    self._report_with_video = transform.apply(
+      nj.pure(self.model.report),
+      self.train_mesh,
+      (tp, tm, ts, ts),
+      (ts, tm),
+      ar,
+      first_outnums=(1,),
+      **shared_kwargs
+  )
 
     self.policy_lock = threading.Lock()
     self.train_lock = threading.Lock()
@@ -343,6 +352,31 @@ class Agent(embodied.Agent):
       mets = self._take_outs(internal.fetch_async(mets))
     mets['params/summary'] = self._summary()
     return carry, mets
+
+  def report_with_video(self, carry, data):
+    seed = data.pop('seed')
+    assert sorted(data.keys()) == sorted(self.spaces.keys())
+
+    with self.train_lock:
+        carry, mets = self._report_with_video(
+            self.params, seed, carry, data
+        )
+
+        # 🔑 NO uses _take_outs todavía
+        mets = internal.fetch_async(mets)
+
+    # separar métricas de video
+    metrics = {}
+    videos = {}
+
+    for k, v in mets.items():
+        if k.startswith('openloop/'):
+            videos[k] = v
+        else:
+            metrics[k] = v
+
+    metrics['params/summary'] = self._summary()
+    return carry, metrics, videos
 
   def stream(self, st):
     def fn(data):
