@@ -73,10 +73,32 @@ def describe(x):
     }
 
 @nj.pure
-def sample_prior(agent, deter):
+def prior_decode(state, deter):
+    # deter: (2048,) → agregar batch
+    deter = deter[None]
+
+    # PRIOR
     logit = agent.model.dyn._prior(deter)
-    z_hat = agent.model.dyn._dist(logit).sample(seed=nj.seed())
-    return z_hat, logit
+    stoch = agent.model.dyn._dist(logit).sample(seed=nj.seed())
+
+    feat = {
+        "deter": deter,
+        "stoch": stoch,
+        "logit": logit,
+    }
+
+    # DECODER
+    dec_carry = agent.model.dec.initial(1)
+    reset = jnp.zeros((1,), dtype=bool)
+    dec_carry, _, recons = agent.model.dec(
+        dec_carry, feat, reset, training=False, single=True
+    )
+
+    # imagen
+    key = list(recons.keys())[0]
+    img = recons[key].mode()[0]   # (H,W,C) en [0,1]
+
+    return state, img
 
 
 def reconstruct_from_prior(agent, driver, image_np, reset):
@@ -89,29 +111,16 @@ def reconstruct_from_prior(agent, driver, image_np, reset):
     print("carry:", jax.tree.map(describe, driver.carry))
     dyn_carry = driver.carry[1]
     h_t = dyn_carry['deter'][0]
-    carry_prior, (feat_prior, action) = sample_prior(agent, h_t)
+    state = {}
+    state, img_dev = prior_decode(state, h_t)
+    
+    # traer a host
+    img = np.array(jax.device_get(img_dev))
+    img = (img * 255).clip(0, 255).astype(np.uint8)
 
-    # 4) decodificar desde feat_prior
-    dec_carry = agent.model.dec.initial(1)
-    dec_carry, _, recons = agent.model.dec(dec_carry, feat_prior, reset, training=False, single=True)
+    recon_img = Image.fromarray(img) # .save("prior.png")
 
-    # Extra: en tu setup recons['image'] puede ser un objeto de salida
-    if 'image' not in recons:
-        print("BBB")
-        
-        # si el key no es 'image', intenta tomar la primera key disponible
-        keys = list(recons.keys())
-        if not keys:
-            raise RuntimeError("Decoder no devolvió recons")
-        k = keys[0]
-        reconstructed = recons[k].mode()[0]
-    else:
-        print("AAA")
-        reconstructed = recons['image'].mode()[0]
-
-    # reconstructed está en [0,1] float -> escala a uint8
-    recon_img = np.array((reconstructed * 255.0).clip(0, 255)).astype(np.uint8)
-    return recon_img
+    return img
 
 
 def make_save_callback(agent, driver, out_dir="dreamer_prior_images"):
