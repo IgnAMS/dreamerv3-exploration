@@ -28,13 +28,12 @@ from embodied.core.driver import Driver   # ajusta la import si tu repo lo organ
 # Opcional: si usas filtered_replay desde tu código
 # from dreamerv3.replay_utils import filtered_replay  # <- ajusta import real si existe
 
-print("UNO\n\n")
-
 LOGDIR = "/home/iamonardes/logdir/dreamer/cookiepedrofull18x29/size12m/02"
 CKPT = f"{LOGDIR}/ckpt"
 CONFIG = f"{LOGDIR}/config.yaml"
 
-print("DOS\n\n")
+
+## CONFIG
 
 config = Config.load(CONFIG)
 config = elements.Flags(config).parse()
@@ -51,20 +50,13 @@ config.update({
     "report_length": 1,
 })
 
-print("TRES\n\n")
 
+## AGENT
 task = config.task.split("_")[-1]
 agent = make_agent(config)
-
-print(type(agent))
-print(dir(agent))
-
-print("CUATRO\n\n")
-
 cp = elements.Checkpoint(CKPT)
 cp.agent = agent
 cp.load()
-print("CINCO")
 
 def describe(x):
     return {
@@ -213,8 +205,7 @@ if __name__ == "__main__":
                 carry_report, mets, video = agent.report_with_video(carry_report, next(stream_report))
                 agg.add(mets)
                 frames = video['openloop/image']
-                print(frames.shape, frames.dtype)
-                print(video.keys())
+                frames = jax.device_get(video['openloop/image'])
                 img0 = frames[0]
 
                 plt.imshow(img0)
