@@ -34,7 +34,10 @@ LOGDIR = "/home/iamonardes/logdir/dreamer/cookiepedrofull18x29/size12m/02"
 CKPT = f"{LOGDIR}/ckpt"
 CONFIG = f"{LOGDIR}/config.yaml"
 out_dir = "reports"
+
 os.makedirs(out_dir, exist_ok=True)
+timestamp = time.strftime("%Y%m%d_%H%M%S")
+out_path = os.path.join(out_dir, f"openloop_{timestamp}.mp4")
 
 ## CONFIG
 
@@ -199,29 +202,25 @@ if __name__ == "__main__":
     # stream_train = iter(agent.stream(make_stream(config, replay, 'eval_replay')))
     stream_report = iter(agent.stream(make_stream(config, replay, 'eval')))
     
-    while step < TOTAL_STEPS:
-        driver(policy, steps=STEP_CHUNK)
-        # el driver on step incremeneta las accioens
-        print(step, len(replay))
-        agg = elements.Agg()
-        if len(replay):
-            for _ in range(args.consec_report * args.report_batches):
-                carry_report, mets, video = agent.report_with_video(carry_report, next(stream_report))
-                agg.add(mets)
-                frames = video['openloop/image']
-                frames = np.asarray(frames)
-                scale_x = 2.0
-                scale_y = 1.0
-                
-                print(frames.shape, frames.dtype)
-                # frames = jax.device_get(video['openloop/image'])
-                # imageio.mimsave("openloop.mp4", frames, fps=10)
-                with imageio.get_writer(
-                    "reports/openloop.mp4",
-                    fps=10,
-                    format="ffmpeg",
-                    codec="libx264",
-                ) as writer:
+    with imageio.get_writer(
+        out_path,
+        fps=10,
+        format="ffmpeg",
+        codec="libx264",
+    ) as writer:
+        while step < TOTAL_STEPS:
+            driver(policy, steps=STEP_CHUNK)
+            # el driver on step incremeneta las accioens
+            print(step, len(replay))
+            agg = elements.Agg()
+            if len(replay):
+                for _ in range(args.consec_report * args.report_batches):
+                    carry_report, mets, video = agent.report_with_video(carry_report, next(stream_report))
+                    agg.add(mets)
+                    frames = video['openloop/image']
+                    frames = np.asarray(frames)
+                    scale_x = 2.0
+                    scale_y = 1.0
                     for f in frames:
                         f_big = cv2.resize(
                             f,
@@ -230,6 +229,6 @@ if __name__ == "__main__":
                             fy=scale_y,
                             interpolation=cv2.INTER_NEAREST
                         )
-                        writer.append_data(f)
+                        writer.append_data(f_big)
 
 # python3 -m dreamerv3.seeing_with_dreamer
