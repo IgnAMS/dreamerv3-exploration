@@ -167,6 +167,7 @@ if __name__ == "__main__":
         replay_context=config.replay_context,
     )
     
+    print(args.report_batches, agent.config.batch_size, config.batch_size, config.report_length)
     
     policy = lambda *args: agent.policy(*args, mode='train')
     TOTAL_STEPS = 300
