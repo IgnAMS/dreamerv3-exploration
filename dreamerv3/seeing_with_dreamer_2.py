@@ -33,10 +33,10 @@ config = elements.Flags(config).parse()
 config.update({"jax": {"platform": "cpu"}})
 config.update({"script": "eval_only"})
 config.update({"logdir": "report"})
-config.update({"defaults": {"logger": {
+config.update({"logger": {
     "outputs": ["jsonl", "scope", "tensorboard"]},
     "filter": 'score|length|fps|ratio|train/loss/|train/rand/|openloop/'
-}})
+})
 
 print("TRES\n\n")
 
