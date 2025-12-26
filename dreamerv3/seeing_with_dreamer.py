@@ -209,6 +209,6 @@ if __name__ == "__main__":
             for _ in range(args.consec_report * args.report_batches):
                 carry_report, mets, video = agent.report_with_video(carry_report, next(stream_report))
                 agg.add(mets)
-                print(type(video))
+                print(video.keys())
     
 # python3 -m dreamerv3.seeing_with_dreamer
