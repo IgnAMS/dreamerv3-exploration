@@ -19,6 +19,8 @@ import time
 import uuid
 import os
 import ninjax as nj
+import matplotlib.pyplot as plt
+
 
 # Driver import (embodied)
 from embodied.core.driver import Driver   # ajusta la import si tu repo lo organiza distinto
@@ -137,22 +139,23 @@ def make_save_callback(agent, driver, out_dir="dreamer_prior_images"):
         else:
             # intenta convertir object -> np
             img_np = np.asarray(img)
-        
-        # guarda original con timestamp/uuid para no sobreescribir
-        uid = f"{int(time.time())}_{uuid.uuid4().hex[:8]}"
+            
         orig_path = os.path.join(out_dir, f"orig_{uid}.png")
-        Image.fromarray(img_np).save(orig_path)
+        recon_path = os.path.join(out_dir, f"prior_{uid}.png")
 
         # reconstrucción desde prior
         try: 
             recon_img = reconstruct_from_prior(agent, driver, img_np, reset)
-            recon_path = os.path.join(out_dir, f"prior_{uid}.png")
             Image.fromarray(recon_img).save(recon_path)
             print(f"Saved original -> {orig_path}; prior -> {recon_path}")
         except Exception as e:
             print("error en on step:", e)
             raise e
         # opcional: imprime ruta
+        
+        # guarda original con timestamp/uuid para no sobreescribir
+        uid = f"{int(time.time())}_{uuid.uuid4().hex[:8]}"
+        Image.fromarray(img_np).save(orig_path)
 
     return on_step
 
@@ -209,6 +212,14 @@ if __name__ == "__main__":
             for _ in range(args.consec_report * args.report_batches):
                 carry_report, mets, video = agent.report_with_video(carry_report, next(stream_report))
                 agg.add(mets)
+                frames = video['openloop/image']
+                print(frames.shape, frames.dtype)
                 print(video.keys())
-    
+                img0 = frames[0]
+
+                plt.imshow(img0)
+                plt.axis("off")
+                plt.show()
+
+
 # python3 -m dreamerv3.seeing_with_dreamer
