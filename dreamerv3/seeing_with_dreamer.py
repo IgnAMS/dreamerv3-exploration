@@ -206,7 +206,8 @@ if __name__ == "__main__":
                 carry_report, mets, video = agent.report_with_video(carry_report, next(stream_report))
                 agg.add(mets)
                 frames = video['openloop/image']
-                frames = jax.device_get(video['openloop/image'])
+                frames = np.asarray(frames)
+                # frames = jax.device_get(video['openloop/image'])
                 imageio.mimsave("openloop.mp4", frames, fps=10)
             
 
