@@ -200,11 +200,13 @@ if __name__ == "__main__":
     stream_report = iter(agent.stream(make_stream(config, replay, 'eval_replay')))
     
     while step < TOTAL_STEPS:
+        print(":o")
         driver(policy, steps=STEP_CHUNK)
         # el driver on step incremeneta las accioens
         print(step)
         
         agg = elements.Agg()
+        print(args.consec_report, args.report_batches)
         for _ in range(args.consec_report * args.report_batches):
             carry_report, mets = agent.report(carry_report, next(stream_report))
             agg.add(mets)
