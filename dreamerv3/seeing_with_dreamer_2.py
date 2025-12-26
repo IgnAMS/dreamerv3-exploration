@@ -33,6 +33,10 @@ config = elements.Flags(config).parse()
 config.update({"jax": {"platform": "cpu"}})
 config.update({"script": "eval_only"})
 config.update({"logdir": "report"})
+config.update({"defaults": {"logger": {
+    "outputs": ["jsonl", "scope", "tensorboard"]},
+    "filter": 'score|length|fps|ratio|train/loss/|train/rand/|openloop/'
+}})
 
 print("TRES\n\n")
 
@@ -155,6 +159,8 @@ if __name__ == "__main__":
         consec_report=config.consec_report,
         replay_context=config.replay_context,
     )
+    
+    
     policy = lambda *args: agent.policy(*args, mode='train')
     TOTAL_STEPS = 300
     STEP_CHUNK = 10
@@ -187,6 +193,6 @@ if __name__ == "__main__":
         agg = elements.Agg()
         for _ in range(args.consec_report * args.report_batches):
             carry_report, mets = agent.report(carry_report, next(stream_report))
-            agg.add(mets)    
+            agg.add(mets)  
     
 # python3 -m dreamerv3.seeing_with_dreamer_2

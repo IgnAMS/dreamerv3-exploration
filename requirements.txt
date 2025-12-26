@@ -22,6 +22,5 @@ minigrid
 tensorboard
 git+https://github.com/pedropalmav/cookie-env.git
 stable_baselines3
-tensorboard
 orbax-checkpoint
 imageio
