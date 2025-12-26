@@ -24,3 +24,4 @@ git+https://github.com/pedropalmav/cookie-env.git
 stable_baselines3
 orbax-checkpoint
 imageio
+tensorflow

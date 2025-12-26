@@ -203,4 +203,4 @@ if __name__ == "__main__":
             carry_report, mets = agent.report(carry_report, next(stream_report))
             agg.add(mets)  
     
-# python3 -m dreamerv3.seeing_with_dreamer_2
+# python3 -m dreamerv3.seeing_with_dreamer
