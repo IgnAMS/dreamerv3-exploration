@@ -216,7 +216,7 @@ if __name__ == "__main__":
                 # frames = jax.device_get(video['openloop/image'])
                 # imageio.mimsave("openloop.mp4", frames, fps=10)
                 with imageio.get_writer(
-                    "reports/openloop.mp4",
+                    "report/openloop.mp4",
                     fps=10,
                     format="ffmpeg",
                     codec="libx264",
