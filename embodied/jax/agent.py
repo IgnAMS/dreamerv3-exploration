@@ -153,6 +153,17 @@ class Agent(embodied.Agent):
         nj.pure(self.model.policy), self.policy_mesh,
         (pp, pm, ps, ps), (ps, ps, ps), ar,
         static_argnums=(4,), **shared_kwargs)
+    
+    # NANO FUNCTION
+    self._prior_decode = transform.apply(
+        nj.pure(self.model.prior_decode),
+        self.policy_mesh,
+        (ps,),           # params
+        (ps,),           # carry
+        ar,
+        single_output=False,
+        **shared_kwargs
+    )
 
     self.policy_lock = threading.Lock()
     self.train_lock = threading.Lock()
@@ -259,6 +270,15 @@ class Agent(embodied.Agent):
         assert np.isfinite(acts[key]).all(), (acts[key], key, space)
 
     return carry, acts, outs
+
+  def prior_decode(self, carry):
+    with self.policy_lock:
+        seed = self._seeds(self.n_actions.value, self.policy_mirrored)
+        carry = internal.to_global(self._stack(carry), self.policy_sharded)
+        carry, img = self._prior_decode(
+            self.policy_params, seed, carry
+        )
+    return carry, img
 
   @elements.timer.section('jaxagent_train')
   def train(self, carry, data):

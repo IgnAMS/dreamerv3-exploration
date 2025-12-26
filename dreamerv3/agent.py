@@ -111,6 +111,15 @@ class Agent(embodied.jax.Agent):
 
   def init_report(self, batch_size):
     return self.init_policy(batch_size)
+  
+  def prior_decode(self, carry):
+    # FUNCION DE NANO :)
+    # carry contiene deter
+    stats = self.dyn._prior(carry['deter'])
+    stoch = self.dyn._sample(stats)
+    img = self.dec({'deter': carry['deter'], 'stoch': stoch})
+    carry = {**carry, 'stoch': stoch}
+    return carry, img
 
   def policy(self, carry, obs, mode='train'):
     (enc_carry, dyn_carry, dec_carry, prevact) = carry

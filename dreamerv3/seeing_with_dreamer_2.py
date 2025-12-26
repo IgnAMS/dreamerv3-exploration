@@ -112,7 +112,7 @@ def reconstruct_from_prior(agent, driver, image_np, reset):
     dyn_carry = driver.carry[1]
     h_t = dyn_carry['deter'][0]
     state = {}
-    state, img_dev = prior_decode(state=state, deter=h_t)
+    state, img_dev = agent.prior_decode(dyn_carry)
     
     # traer a host
     img = np.array(jax.device_get(img_dev))
