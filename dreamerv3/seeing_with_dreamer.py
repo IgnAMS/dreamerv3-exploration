@@ -7,6 +7,7 @@ from dreamerv3.main import (
     make_stream,
     make_logger,
 )
+import imageio
 from embodied.run.train import filtered_replay
 import elements
 from elements import Config
@@ -206,11 +207,7 @@ if __name__ == "__main__":
                 agg.add(mets)
                 frames = video['openloop/image']
                 frames = jax.device_get(video['openloop/image'])
-                img0 = frames[0]
-
-                plt.imshow(img0)
-                plt.axis("off")
-                plt.show()
-
+                imageio.mimsave("openloop.mp4", frames, fps=10)
+            
 
 # python3 -m dreamerv3.seeing_with_dreamer
