@@ -43,6 +43,11 @@ config.update({"logger": {
     "outputs": ["jsonl", "scope", "tensorboard"],
     "filter": 'score|length|fps|ratio|train/loss/|train/rand/|openloop/'
 }})
+config.update({
+    "batch_size": 1,
+    "batch_length": 1,
+    "report_length": 1,
+})
 
 print("TRES\n\n")
 
@@ -201,6 +206,6 @@ if __name__ == "__main__":
         agg = elements.Agg()
         for _ in range(args.consec_report * args.report_batches):
             carry_report, mets = agent.report(carry_report, next(stream_report))
-            agg.add(mets)  
+            agg.add(mets)
     
 # python3 -m dreamerv3.seeing_with_dreamer
