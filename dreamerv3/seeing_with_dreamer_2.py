@@ -112,7 +112,7 @@ def reconstruct_from_prior(agent, driver, image_np, reset):
     dyn_carry = driver.carry[1]
     h_t = dyn_carry['deter'][0]
     state = {}
-    state, img_dev = prior_decode(state, h_t)
+    state, img_dev = prior_decode(state=state, deter=h_t)
     
     # traer a host
     img = np.array(jax.device_get(img_dev))
@@ -147,11 +147,6 @@ def make_save_callback(agent, driver, out_dir="dreamer_prior_images"):
             # intenta convertir object -> np
             img_np = np.asarray(img)
         
-        # guarda original con timestamp/uuid para no sobreescribir
-        uid = f"{int(time.time())}_{uuid.uuid4().hex[:8]}"
-        orig_path = os.path.join(out_dir, f"orig_{uid}.png")
-        Image.fromarray(img_np).save(orig_path)
-
         # reconstrucción desde prior
         try: 
             recon_img = reconstruct_from_prior(agent, driver, img_np, reset)
@@ -162,6 +157,11 @@ def make_save_callback(agent, driver, out_dir="dreamer_prior_images"):
             print("error en on step:", e)
             raise e
         # opcional: imprime ruta
+
+        # guarda original con timestamp/uuid para no sobreescribir
+        uid = f"{int(time.time())}_{uuid.uuid4().hex[:8]}"
+        orig_path = os.path.join(out_dir, f"orig_{uid}.png")
+        Image.fromarray(img_np).save(orig_path)
 
     return on_step
 
