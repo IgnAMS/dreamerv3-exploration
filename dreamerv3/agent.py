@@ -245,6 +245,7 @@ class Agent(embodied.jax.Agent):
     return loss, (carry, entries, outs, metrics)
 
   def report(self, carry, data):
+    print("reportando", self.config.report)
     if not self.config.report:
       return carry, {}
 
@@ -287,6 +288,7 @@ class Agent(embodied.jax.Agent):
         training=False)
 
     # Video preds
+    print("imkeys:", self.dec.imgkeys)
     for key in self.dec.imgkeys:
       assert obs[key].dtype == jnp.uint8
       true = obs[key][:RB]
@@ -304,6 +306,7 @@ class Agent(embodied.jax.Agent):
 
       B, T, H, W, C = video.shape
       grid = video.transpose((1, 2, 0, 3, 4)).reshape((T, H, B * W, C))
+      print("guardando en ", f'openloop/{key}')
       metrics[f'openloop/{key}'] = grid
 
     carry = (*new_carry, {k: data[k][:, -1] for k in self.act_space})
