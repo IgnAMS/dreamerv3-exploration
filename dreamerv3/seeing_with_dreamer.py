@@ -174,7 +174,7 @@ if __name__ == "__main__":
     
     policy = lambda *args: agent.policy(*args, mode='train')
     TOTAL_STEPS = 300
-    STEP_CHUNK = 10
+    STEP_CHUNK = 1
     logdir = elements.Path(args.logdir)
     logger = make_logger(config)
     step = logger.step
@@ -201,7 +201,8 @@ if __name__ == "__main__":
     
     while step < TOTAL_STEPS:
         driver(policy, steps=STEP_CHUNK)
-        step += STEP_CHUNK
+        # el driver on step incremeneta las accioens
+        print(step)
         
         agg = elements.Agg()
         for _ in range(args.consec_report * args.report_batches):
