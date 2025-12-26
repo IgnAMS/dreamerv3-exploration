@@ -209,8 +209,9 @@ if __name__ == "__main__":
         
         agg = elements.Agg()
         print(args.consec_report, args.report_batches)
-        for _ in range(args.consec_report * args.report_batches):
-            carry_report, mets = agent.report(carry_report, next(stream_report))
-            agg.add(mets)
+        if len(replay):
+            for _ in range(args.consec_report * args.report_batches):
+                carry_report, mets = agent.report(carry_report, next(stream_report))
+                agg.add(mets)
     
 # python3 -m dreamerv3.seeing_with_dreamer
