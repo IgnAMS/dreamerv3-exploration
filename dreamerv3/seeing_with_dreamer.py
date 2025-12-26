@@ -33,7 +33,8 @@ from embodied.core.driver import Driver   # ajusta la import si tu repo lo organ
 LOGDIR = "/home/iamonardes/logdir/dreamer/cookiepedrofull18x29/size12m/02"
 CKPT = f"{LOGDIR}/ckpt"
 CONFIG = f"{LOGDIR}/config.yaml"
-
+out_dir = "reports"
+os.makedirs(out_dir, exist_ok=True)
 
 ## CONFIG
 
@@ -216,7 +217,7 @@ if __name__ == "__main__":
                 # frames = jax.device_get(video['openloop/image'])
                 # imageio.mimsave("openloop.mp4", frames, fps=10)
                 with imageio.get_writer(
-                    "report/openloop.mp4",
+                    "reports/openloop.mp4",
                     fps=10,
                     format="ffmpeg",
                     codec="libx264",
