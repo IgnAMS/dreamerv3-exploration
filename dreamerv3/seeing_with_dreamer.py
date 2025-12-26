@@ -192,11 +192,13 @@ if __name__ == "__main__":
     
     # report:
     driver.on_step(lambda tran, _: step.increment())
+    print(config.replay.size, config.report_length, )
     replay = make_replay(config, "report", mode='eval_replay')
     
     driver.on_step(lambda tran, _: filtered_replay(replay, agent.spaces.keys(), tran))
     carry_report = agent.init_report(args.batch_size)
-    stream_train = iter(agent.stream(make_stream(config, replay, 'eval_replay')))
+    # stream_train = iter(agent.stream(make_stream(config, replay, 'eval_replay')))
+    print(config.report_length, config.consec_report)
     stream_report = iter(agent.stream(make_stream(config, replay, 'eval_replay')))
     
     while step < TOTAL_STEPS:
