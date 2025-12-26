@@ -175,7 +175,7 @@ if __name__ == "__main__":
     print(args.report_batches, agent.config.batch_size, config.batch_size, config.report_length)
     
     policy = lambda *args: agent.policy(*args, mode='train')
-    TOTAL_STEPS = 1000
+    TOTAL_STEPS = 100
     STEP_CHUNK = 1
     logdir = elements.Path(args.logdir)
     logger = make_logger(config)
