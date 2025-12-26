@@ -207,8 +207,16 @@ if __name__ == "__main__":
                 agg.add(mets)
                 frames = video['openloop/image']
                 frames = np.asarray(frames)
+                print(frames.shape, frames.dtype)
                 # frames = jax.device_get(video['openloop/image'])
-                imageio.mimsave("openloop.mp4", frames, fps=10)
-            
+                # imageio.mimsave("openloop.mp4", frames, fps=10)
+                with imageio.get_writer(
+                    "openloop.mp4",
+                    fps=10,
+                    format="ffmpeg",
+                    codec="libx264",
+                ) as writer:
+                    for f in frames:
+                        writer.append_data(f)
 
 # python3 -m dreamerv3.seeing_with_dreamer

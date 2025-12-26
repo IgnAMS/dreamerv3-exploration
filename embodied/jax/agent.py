@@ -361,8 +361,6 @@ class Agent(embodied.Agent):
         carry, mets = self._report_with_video(
             self.params, seed, carry, data
         )
-
-        # 🔑 NO uses _take_outs todavía
         mets = internal.fetch_async(mets)
 
     # separar métricas de video
