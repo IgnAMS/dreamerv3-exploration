@@ -347,7 +347,6 @@ class Agent(embodied.Agent):
     assert sorted(data.keys()) == sorted(self.spaces.keys()), (
         sorted(data.keys()), sorted(self.spaces.keys()))
     with self.train_lock:
-      print("reportando!")
       carry, mets = self._report(self.params, seed, carry, data)
       mets = self._take_outs(internal.fetch_async(mets))
     mets['params/summary'] = self._summary()

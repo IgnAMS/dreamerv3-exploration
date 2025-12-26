@@ -20,6 +20,7 @@ import time
 import uuid
 import os
 import ninjax as nj
+import cv2
 import matplotlib.pyplot as plt
 
 
@@ -170,7 +171,7 @@ if __name__ == "__main__":
     print(args.report_batches, agent.config.batch_size, config.batch_size, config.report_length)
     
     policy = lambda *args: agent.policy(*args, mode='train')
-    TOTAL_STEPS = 300
+    TOTAL_STEPS = 1000
     STEP_CHUNK = 1
     logdir = elements.Path(args.logdir)
     logger = make_logger(config)
@@ -208,16 +209,26 @@ if __name__ == "__main__":
                 agg.add(mets)
                 frames = video['openloop/image']
                 frames = np.asarray(frames)
+                scale_x = 2.0
+                scale_y = 1.0
+                
                 print(frames.shape, frames.dtype)
                 # frames = jax.device_get(video['openloop/image'])
                 # imageio.mimsave("openloop.mp4", frames, fps=10)
                 with imageio.get_writer(
-                    "openloop.mp4",
+                    "reports/openloop.mp4",
                     fps=10,
                     format="ffmpeg",
                     codec="libx264",
                 ) as writer:
                     for f in frames:
+                        f_big = cv2.resize(
+                            f,
+                            None,
+                            fx=scale_x,
+                            fy=scale_y,
+                            interpolation=cv2.INTER_NEAREST
+                        )
                         writer.append_data(f)
 
 # python3 -m dreamerv3.seeing_with_dreamer
