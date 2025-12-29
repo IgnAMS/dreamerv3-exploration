@@ -17,3 +17,5 @@ test_observation_raw.png
 *.synctex.gz
 assessing_adaptative_WMs_in_machines.out
 assessing_adaptative_WMs_in_machines.log
+curiosity_driven_exploration.log
+curiosity_driven_exploration.out
