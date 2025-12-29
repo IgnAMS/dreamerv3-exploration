@@ -15,5 +15,5 @@ test_observation_raw.png
 *.fdb_latexmk
 *.fls
 *.synctex.gz
-papers/*.out
-papers/*.log
+papers_summary/*.out
+papers_summary/*.log
