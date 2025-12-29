@@ -14,8 +14,15 @@
 \usepackage{hyperref}
 \usepackage{cite}
 
+
+
 % Márgenes
 \usepackage{geometry}
+
+
+\renewcommand{\thesubsection}{\arabic{subsection}}
+\setcounter{secnumdepth}{1} % Comentar para que aparezcan los números en los subsections 
+
 \geometry{margin=2.5cm}
 
 % Espaciado
@@ -40,45 +47,33 @@
 \textbf{Conferencia/Journal:} ICML 2017 \\
 \textbf{Link:} \url{https://arxiv.org/abs/1705.05363}
 
-% --------------------
 \section{Motivación}
-% --------------------
-Explica:
-\begin{itemize}
-    \item ¿Qué problema aborda el paper?
-    En muchos ambientes las rewards son sparse, por lo que una manera de incentivar al agente a que explore es dar una reward intrinseca por explorar.
-    Se define curiosidad como la diferencia entre las consecuencias predichas y las consecuencias reales por las acciones.
+\subsection{Problema presente} 
+En muchos ambientes las rewards son sparse, por lo que una manera de incentivar al agente a que explore es dar una reward intrinseca por explorar.
+Se define curiosidad como la diferencia entre las consecuencias predichas y las consecuencias reales por las acciones.
 
-    \item ¿Por qué es importante?
-    Es importante porque la exploración permite aprender cosas a largo plazo. La exploración permite
-    entender la relación entre las acciones que tomamos y como cambia el mundo. 
+\subsection{Relevancia del problema}
+Es importante porque la exploración permite aprender cosas a largo plazo. La exploración permite
+ entender la relación entre las acciones que tomamos y como cambia el mundo. 
 
-    \item ¿Qué limitaciones tienen los enfoques previos?
-    Las limitaciones que se tiene es que hay que definir algo como novedoso. Para eso, 
-    necesitamos entender la dinámica del ambiente ($s_{t+1} = f(s_t, a_t)$). Esta dinámica puede ser dificil de predecir en el mundo
-     de las imagenes y sumando la estocacidad se vuelve complejo. 
-\end{itemize}
+\subsection{Agujero en la literatura / limitaciones previas}
 
-% --------------------
+Las limitaciones que se tiene es que hay que definir algo como novedoso. Para eso, 
+necesitamos entender la dinámica del ambiente ($s_{t+1} = f(s_t, a_t)$). Esta dinámica puede ser dificil de predecir en el mundo
+de las imagenes y sumando la estocacidad se vuelve complejo. 
+
 \section{Idea Principal}
-% --------------------
-Describe la contribución central del paper en alto nivel:
-\begin{itemize}
-    \item ¿Qué proponen?
-    
-    Proponen obtener un latente vectorial a partir de la imagen actual. Luego, crear un modelo que dado el latente actual y la acción intente
-    predecir la siguiente imagen. Se da el error de predicción latente como recompensa de curiosidad intrinseca.
+\subsection{Idea concisa}
+Proponen obtener un latente vectorial a partir de la imagen actual. Luego, crear un modelo que dado el latente actual y la acción intente
+predecir la siguiente imagen. Se da el error de predicción latente como recompensa de curiosidad intrinseca.
    
-    \item ¿Qué lo hace diferente a trabajos anteriores?
-    Lo hace diferente en el sentido de poder predecir como cambia el mundo en base a las acciones del agente. 
-    Para ello, toma el vector latente como error para poder aprender información útil y no imagenes crudas.
-\end{itemize}
+\subsection{Innovación}
+Se diferencia de trabajos previos en poder predecir como cambia el mundo en base a las acciones del agente. 
+Para ello, toma el vector latente como error para poder aprender información útil y no imagenes crudas.
 
-% --------------------
 \section{Metodología}
-% --------------------
-\begin{itemize}
-    \item Modelamiento: 
+
+\subsection{Modelamiento} 
 Se define la reward como:
 \[
 r_t := r_t^i + r_t^e
@@ -93,6 +88,7 @@ como la acción que debió usarse para hacer la transición. Se crea la Loss
 \[
 \min \; L_I(\hat{a}_t, \, a_t)
 \]
+Ayuda como regualrizador del espacio latente para aprender información relevante a lo que puede controlar o que lo puede afectar.
 
 También se crea el modelo \textit{forward dynamics} $f$:
 \[
@@ -120,24 +116,22 @@ Finalmente, la función a minimizar es:
 donde $\beta \in [0, 1]$ es un número arbitrario que se usa para decidir como escalarlo y $\lambda$ asigna prioridad a la recompensa.
 
 
-    \item Assumptions:
+\subsection{Assumptions}
     
-    Se usarán las imágenes en blanco y negro y redimensionadas a 42x42. 
+Se usarán las imágenes en blanco y negro y redimensionadas a 42x42. 
 
-    \item Arquitectura:
+\subsection{Arquitectura}
 
-    A3C: 4 Convolutional layers con 32 filtros, kernel size de 3x3, stride 2, padding 1, ELU después de cada convolutional layer. 
-    El output de la última layer alimenta un LSTM con 256 unidades. 
-    Se usan 2 fully layers para predecir: value function, action de la representación del LSTM.
+A3C: 4 Convolutional layers con 32 filtros, kernel size de 3x3, stride 2, padding 1, ELU después de cada convolutional layer. 
+El output de la última layer alimenta un LSTM con 256 unidades. 
+Se usan 2 fully layers para predecir: value function, action de la representación del LSTM.
 
 
-    Intrinsic Curiosity Model (ICM): 
-    \begin{itemize}
-        \item latent $\varphi(s_t)$: 4 conv layers de 32 filtros, kernel size de 3x3, stride 2, padding 1. ELU entre cada conv. $\varphi(s_t) \in \mathbb{R}^{288}$
-        \item inverse dynamic $g(\varphi(s_t), \, \varphi(s_{t+1}))$: se concatenan los $\varphi$'s, se pasan por una fully connected de salida 256 y luego a una fully connected de salida 4. 
-        \item forward dynaimc $f(\varphi(s_t), \, a_t)$: Se concatena $\varphi(s_t), \, a_t$ se pasa por dos fully connected de salidas 256 y 288. $\beta = 0.2, \, \lambda = 0.1$.
-    \end{itemize}
-
+Intrinsic Curiosity Model (ICM): 
+\begin{itemize}
+    \item latent $\varphi(s_t)$: 4 conv layers de 32 filtros, kernel size de 3x3, stride 2, padding 1. ELU entre cada conv. $\varphi(s_t) \in \mathbb{R}^{288}$
+    \item inverse dynamic $g(\varphi(s_t), \, \varphi(s_{t+1}))$: se concatenan los $\varphi$'s, se pasan por una fully connected de salida 256 y luego a una fully connected de salida 4. 
+    \item forward dynaimc $f(\varphi(s_t), \, a_t)$: Se concatena $\varphi(s_t), \, a_t$ se pasa por dos fully connected de salidas 256 y 288. $\beta = 0.2, \, \lambda = 0.1$.
 \end{itemize}
 
 El resultado final se le llama \textbf{ICM + A3C}.
@@ -146,72 +140,106 @@ El resultado final se le llama \textbf{ICM + A3C}.
 % --------------------
 \section{Experimentos}
 % --------------------
-\begin{itemize}
-    \item Entornos o datasets
+\subsection{Entornos o datasets}
     
-    El primer ambiente en el que se entrenó fue en VizDoom que es básicamente Doom. 
-    Se juega en el ambiente de `DoomMyWayHome-v0' donde se debe explorar un mapa 3D y llegar a un destino.
-    Se terminan los episodios con 2100 steps o llegando al objetivo. Se tiene reward sparse de 0 si se mueve y 
-    1 si se llega al objetivo. 
+El primer ambiente en el que se entrenó fue en VizDoom que es básicamente Doom. 
+Se juega en el ambiente de `DoomMyWayHome-v0' donde se debe explorar un mapa 3D y llegar a un destino.
+Se terminan los episodios con 2100 steps o llegando al objetivo. Se tiene reward sparse de 0 si se mueve y 
+1 si se llega al objetivo. 
 
-    El segundo ambiente en el que se entrena es en Super Mario Bros. Se tienen 14 acciones de 
-    dirección que puede ser ir hacia arriba y derecha al mismo tiempo, etc. 
+El segundo ambiente en el que se entrena es en Super Mario Bros. Se tienen 14 acciones de 
+dirección que puede ser ir hacia arriba y derecha al mismo tiempo, etc. 
 
-    Las imagenes son en blanco y negro y son redimensionadas a 42x42. 
+Las imagenes son en blanco y negro y son redimensionadas a 42x42. 
 
-    \item Baselines
-    \begin{itemize}
-        \item A3C.
-        \item ICM-pixels + A3C: sin inverse dynamics ni latente, solo pixel.
-        \item VIME/TRPO.
-    \end{itemize}
+\subsection{Baselines}
 
-    \item Settings: Para VizDoom se usan 3 tipos de settings. Dense donde se spawnea en alguna de 17 opciones de spawn posibles.
-    Sparse parte desde el cuarto 14 que está a 270 pasos. Very Sparse parte del cuarto 17 que está a 350 steps.
-
-    \begin{center}
-		\includegraphics[width=\linewidth]{pasted-images/curiosity_driven_exploration-14-34-53.png}
-	\end{center}
-    El resultado del caso del ICM+A3C es claramente mejor y sobre todo en ambientes sparses. 
-    El 66\% de las runs logró aprender en el caso very sparse una buena política. 
-
-
+\begin{itemize}
+    \item A3C.
+    \item ICM-pixels + A3C: sin inverse dynamics ni latente, solo pixel.
+    \item VIME/TRPO.
 \end{itemize}
 
-% --------------------
+\subsection{Settings}
+Para VizDoom se usan  3 tipos de settings. Dense donde se spawnea en alguna de 17 opciones de spawn posibles.
+Sparse parte desde el cuarto 14 que está a 270 pasos. Very Sparse parte del cuarto 17 que está a 350 steps.
+
+
+\subsection{Nuevos escenarios}
+Se plantea si se puede transferir el conocimiento de exploración de un nivel a otro nivel el cual sea relativamente similar. 
+Opciones:
+\begin{itemize}
+    \item Aplicar la política sin ningún cambio.
+    \item Fine-tuning con solo curiosidad (intrínseca).
+    \item Adaptar la política a una reward del ambiente (extrínsica).
+\end{itemize}
+
+
 \section{Resultados}
-% --------------------
-Resume los resultados más importantes:
-\begin{itemize}
-    \item ¿Supera a los baselines?
-    \item ¿En qué escenarios funciona mejor / peor?
-\end{itemize}
 
-% --------------------
+Primero se comparó con VizDoom en llegar al lugar objetivo entre A3C, ICM-pixel + A3C y ICM + A3C.
+\subsection{Comparación con el estado del arte o baselines}
+
+\begin{center}
+    \includegraphics[width=\linewidth]{pasted-images/curiosity_driven_exploration-14-34-53.png}
+\end{center}
+El resultado del caso del ICM+A3C es claramente mejor y sobre todo en ambientes sparses. 
+El 66\% de las runs logró aprender en el caso very sparse y aprendió una buena política. 
+
+
+La siguiente tabla muestra los resultados de la transferencia de aprendizaje con y sin fine tunning de la instrinsic reward en diferentes niveles.
+\begin{center}
+    \includegraphics[width=\linewidth]{pasted-images/curiosity_driven_exploration-16-26-59.png}
+\end{center}
+Se puede apreciar que IMC+A3C tiene una buena capacidad de transferencia sobre nuevos ambientes. Para el caso de mario Level 3 el hacerle el fine tunning hace que le vaya peor por explorar partes inútiles. 
+
+El siguiente gráfico es un finetunning de un extrinsic reward. Se preentrena un agente para explorar y luego se finetunea para conseguir recompensa en un mapa diferente con texturas nuevas.
+\begin{center}
+    \includegraphics[width=0.5 \linewidth]{pasted-images/curiosity_driven_exploration-16-30-10.png}
+\end{center}
+
+
+\subsection{¿En qué escenarios funciona mejor / peor?}
+Funciona bien en ambientes de episodios largos de exploración de forma sencilla. Es bueno recreando imagenes.
+
+Funciona mal cuando se requiere aprender una política de acciones para realizar cosas específicas como hacer 15 pasos para hacer un salto especializado. 
+Se complementa bien con una recompensa intrinseca para poder avanzar. 
+
+
 \section{Discusión Crítica}
-% --------------------
-Tu análisis:
-\begin{itemize}
-    \item Fortalezas
-    \item Debilidades
-    \item Supuestos cuestionables
-    \item Qué no queda claro
-\end{itemize}
+\subsection{Fortalezas}
+Una señal intrinseca de exploración que no depende de heurísticas ni de conteo de estados visitados.
+El uso de un espacio latente aprendido permite que al recompensa de curiosidad sea robusta a cambios visuales irrelevantes y ruido estocástico.
+Compatible con métodos existentes de RL.
 
-% --------------------
+Buena transferencia de conocimiento.
+
+\subsection{Debilidades} 
+La recompensa intrinseca no permite aprender una política de movimientos necesarios sino una exploración de como moverse más bien.
+No siempre lo novedoso es lo mejor, a veces es mejor conseguir la política buscada en vez de explorar.
+
+\subsection{Supuestos cuestionables} 
+Capacidad del espacio latente aprendido. Uso de imagenes en gris y no en color. 
+Podría variar el $\eta$ de exploración durante el entrenamiento y no dejarlo fijo.
+
+\subsection{Qué no queda claro} 
+Aporte en ambientes con recompensas densas. 
+Impacto computacional.
+
 \section{Conclusiones}
-% --------------------
+Buen aporte para incentivar la exploración en ambientes basados en imagenes con diferentes texturas. 
+Buena transferencia de conocimientos en diferentes juegos/objetivos. 
 
-% --------------------
-\section*{Comentario Personal (opcional)}
-% --------------------
-Tu opinión:
-\begin{itemize}
-    \item ¿Te parece una buena contribución?
-    \item ¿La usarías en tu investigación?
-\end{itemize}
+Falta mejorar el control fino de acciones. 
 
-% --------------------
+\section*{Comentario Personal}
+\subsection{¿Es una buena contribución?}
+Muy buena contribución. Logra objetivos más dificiles cambiando la recompensa y aprendiendo una versión comprimida del estado.
+
+\subsection{¿Lo usaría en mi investigación?}
+Sí, está asociado a intentar modelar el mundo de forma interna para poder predecir las imágenes mediante un espacio latente compacto.
+
+
 \bibliographystyle{plain}
 \bibliography{references}
 
