@@ -26,7 +26,8 @@ from embodied.envs.new_minigrid import (
     CookiePedroOneHot,
     DeterministicCookie,
     TwoCookies,
-    CookiePedroFull
+    CookiePedroFull,
+    CookiePedroFullFixed,
 )
 
 # key->action mapping (MiniGrid classic)
@@ -115,13 +116,13 @@ def main():
         make_agent=CookieEnv # RawMiddlePoint
     )
     """
-    env = CookiePedroFull(
+    env = CookiePedroFullFixed(
         task=GRID_SIZE,
         size=PIXEL_SIZE,
         resize='pillow',
         tile_size=TILE_SIZE,
         render_mode=RENDER_MODE,
-    )
+    ) 
     
     # reset and get starting obs
     obs = env.reset()

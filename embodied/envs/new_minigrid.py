@@ -471,3 +471,23 @@ class TwoCookies(SimpleImageEnv):
             max_steps=4*18*29,
             **kwargs,
         )
+        
+class CookiePedroFullFixed(SimpleImageEnv):
+    def __init__(
+        self,
+        task=None,
+        **kwargs
+    ):
+        from cookie_env.env import CookieEnv
+        
+        super().__init__(
+            task=task,
+            make_env=CookieEnv,
+            agent_start_pos=(14, 14),
+            full_obs=False,
+            rgb_img_obs="partial",
+            onehot=False,
+            max_steps=4*18*29,
+            respawn=False,
+            **kwargs,
+        )
