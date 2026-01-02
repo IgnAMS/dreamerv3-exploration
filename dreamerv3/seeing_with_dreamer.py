@@ -30,7 +30,7 @@ from embodied.core.driver import Driver   # ajusta la import si tu repo lo organ
 # Opcional: si usas filtered_replay desde tu código
 # from dreamerv3.replay_utils import filtered_replay  # <- ajusta import real si existe
 
-LOGDIR = "/home/iamonardes/logdir/dreamer/cookiepedrofull18x29/size12m/02"
+LOGDIR = "/home/iamonardes/logdir/dreamer/cookiepedrofullfixed18x29/size12m/03"
 CKPT = f"{LOGDIR}/ckpt"
 CONFIG = f"{LOGDIR}/config.yaml"
 out_dir = "reports"
