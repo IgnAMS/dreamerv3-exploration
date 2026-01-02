@@ -89,6 +89,8 @@ como la acción que debió usarse para hacer la transición. Se crea la Loss
 \min \; L_I(\hat{a}_t, \, a_t)
 \]
 Ayuda como regualrizador del espacio latente para aprender información relevante a lo que puede controlar o que lo puede afectar.
+Nota: $L_I$ es cross-entropy para acciones discretas y MSE para acciones continuas.
+
 
 También se crea el modelo \textit{forward dynamics} $f$:
 \[

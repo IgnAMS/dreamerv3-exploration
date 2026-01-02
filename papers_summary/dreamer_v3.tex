@@ -6,7 +6,7 @@
 \usepackage[utf8]{inputenc}
 \usepackage[T1]{fontenc}
 \usepackage{lmodern}
-\usepackage[spanish]{babel}
+\usepackage[english]{babel}
 
 \usepackage{amsmath, amssymb}
 \usepackage{graphicx}
@@ -21,6 +21,8 @@
 
 
 \renewcommand{\thesubsection}{\arabic{subsection}}
+\newcommand{\loss}{\mathcal{L}}
+\newcommand{\dado}{\,|\,}
 \setcounter{secnumdepth}{1} % Comentar para que aparezcan los números en los subsections 
 
 \geometry{margin=2.5cm}
@@ -29,8 +31,8 @@
 \usepackage{setspace}
 \onehalfspacing
 
-\title{\textbf{Resumen del Paper:}\\
-\large }
+\title{\textbf{Summary of the paper:}\\
+\large Mastering Diverse Domains trough World Models }
 
 \author{Ignacio Monardes}
 
@@ -40,72 +42,241 @@
 
 \maketitle
 
-\section*{Referencia}
+\section*{Reference}
 \noindent
-\textbf{Autores: Danijar Hafner, et al.}  \\
-\textbf{Título:} \textit{Mastering Diverse Domains trough World Models} \\
-\textbf{Conferencia/Journal: Nature}   \\
+\textbf{Authors: Danijar Hafner, et al.}  \\
+\textbf{Title:} \textit{Mastering Diverse Domains trough World Models} \\
+\textbf{Conference/Journal: Nature}   \\
 \textbf{Link:} \url{https://arxiv.org/pdf/2301.04104}
 
-\section{Motivación}
-\subsection{Problema presente} 
- 
+\section{Motivation}
+\subsection{Problem to solve} 
+
+Dreamer v3 is an algorithm that learns the world model of the environemnts and can learn
+how to act in over 150 tasks including minecraft with a single configuration of hyperparameters.
+
+\subsection{Relevance of the problematic}
+
+The relevance of the problem is that with this algorithm we can use it in many environements without the
+necessity of tunning the hyperparameters and with a performance comparable of specialized agents. The robustness
+in many different scenarios is a result of using normalization, balancing and transformations during trainning.
+
+\subsection{Hole in the literature / previous limitations}
+
+The previous limitations was the inhability of the agents to just be runned with an agent without a simple configuration. 
+This led to running many configurations to set the better one.
+
+\section{Main idea}
+\subsection{Concise explanation}
+There are three neural networks:
+\begin{itemize}
+    \item The World Model predicts the outcomes of potential actions.
+    \item The critic judges the value of each outcome.
+    \item The actor chooses actions to reach the most valuable outcomes.
+\end{itemize}
+All these components need to accomodate different signal magnitudes and robustly balance terms in their objectives.
+
+\subsection{Innovation}
+
+The innovation of this particular papers is the use of many regularizers. The innovation of dreamer in particular
+is to learn a policy in the imaginated world which is much cheaper than to train on the real image that may contain 
+unnecesary or noisy information.
+
+\section{Methodology}
+
+\subsection{Modeling} 
+
+\begin{itemize}
+    \item World Model: The world model consist of an autoencoder that enables planning by predicting the future.
+    
+    \begin{center}
+		\includegraphics[width=0.7\linewidth]{pasted-images/dreamer_v3-11-43-58.png}
+	\end{center}
+    
+    \begin{enumerate}
+        \item The encoder maps sensory data (observation) $x_t$ to an stochastic representation $z_t$. 
+        \item A sequence model (RNN) predicts the representation of $\hat{z}_t$ using the past actions ($a_{t-1}$). 
+        The state is defined as $s_t := (h_t, z_t)$ from which we predict rewards $r_t$ and episode continuation 
+        flags $c_t \in \{0, 1\}$ and reconstructs the inputs to ensure informative representations
 
 
-\subsection{Relevancia del problema}
+        \item The representations $z_t$ are sampled from a vector of softmax distributions.
+        
+        \item Given a sequence batch of inputs $x_{1:T}$, actions $a_{1:T}$, rewards: $r_{1:T}$ and
+        continuations $r_{1:T}$ the world model parameters $\phi$ are optimized end-to-end to minimize
+        the prediction loss $\loss_{pred}$, the dynamics loss $\loss_{dyn}$ and the 
+        representation loss $\loss_{rep}$ with corresponding weights: $\beta_{pred} = 1, \, \beta_{dyn} = 1, \, \beta_{rep} = 0.1$:
+        \begin{align*}
+            \loss_{\phi} &:= \mathbb{E}_{q_\phi}\left[ 
+                \sum_{t=1}^T \left( 
+                    \beta_{pred} \, \loss_{pred}(\phi)
+                    + \beta_{dyn} \, \loss_{dyn}(\phi) 
+                    + \beta_{rep} \, \loss_{rep}(\phi)
+                \right)
+            \right] \\
+            %
+            \loss_{pred} &:= -\ln p_\phi(x_t \dado z_t, h_t) - \ln p_\phi (r_t \dado z_t, h_t) - \ln p_\phi(c_t \dado, z_t, h_t) \\
+            %
+            \loss_{dyn} &:= \max\left(1, KL\left[ sg(q_\phi(z_t \dado h_t, x_t)) \;\|\; p_\phi(z_t \dado h_t) \right]\right) \\
+            \loss_{rep} &:= \max\left(1, KL\left[ q_\phi(z_t \dado h_t, x_t) \;\|\; sg(p_\phi(z_t \dado h_t)) \right]\right) 
+            %
+        \end{align*}  
 
-\subsection{Agujero en la literatura / limitaciones previas}
+        \[
+        KL(q \;\|\; p) := \mathbb{E}_q[\log(q) - \log(p)]
+        \]
+
+        \item The prediction loss trains the decoder and reward via the symlog squared loss. 
+        The continue predictor via logistic regression.
+        \item The dynamics loss trains the sequence model to predict the next representation 
+        by minimizing the KL divergence between the predictor and the next stochastic representation.
+        \item The representation loss trains the representations to become more predictable.
+        
+    \end{enumerate}
+    
+    \item Critic: Both actor and critic are only trainned on imagined trajectories. 
+    The actor aims to maximize the return with a discount factor of $\gamma = 0.997$ 
+    for each model state.
+    For rewards beyond the horizon $T=16$, the critic learns to approximate the distribution of the returns.
+
+    \[
+    \text{Actor:} \quad a_t \sim \pi_\theta(a_t \dado s_t) \quad \quad \text{Critic:} \quad v_\psi(R_t \dado s_t). 
+    \]
+    From the replayed inputs the WM and actor generates a trajectory $\{(s_t, \, a_t, \, r_{t}, \, c_{t})\}_{t=1:T}$. 
+    
+    The critic must learn this distribution:
+    \[
+    v_t := \mathbb{E}[v_\psi(\, \cdot \dado s_t)]
+    \]
+    
+    The loss of the critic is:
+    \[
+    \loss(\psi) := - \sum_{t=1}^T \ln p_\psi(R_t^\lambda \dado s_t)
+    \]
+    The critic is parametrized as a categorical distribution with exponentially spaced bins.
 
 
-\section{Idea Principal}
-\subsection{Idea concisa}
-   
-\subsection{Innovación}
+    \item Actor: the actor learns to choose actions that maximize return while
+    exploring trough an entropy regularizer. The scale of the regularizer depends on the 
+    sparsity and scale of the rewards. Explore more if the reward is sparse. To manage the 
+    scale we could just normalize. 
 
-\section{Metodología}
+    \[
+    \loss(\theta) := - \sum_{t=1}^T \text{sg}\left( (R_t^\lambda - v_\psi(s_t)) / \max(1, S) \right) \log \pi_\theta(a_t \dado s_t) + \eta H\left[\pi_\theta(a_t \dado s_t) \right] 
+    \]
+    \[
+    S := \text{EMA}(\text{Per}(R_t^\lambda, 96) - \text{Per}(R_t^\lambda, 5), 0.99)
+    \]
+    Substracting an offset doesn't change the actor gradient (sparsity) 
+    and dividing by $S$ is sufficient for the normalization.
 
-\subsection{Modelamiento} 
+    \item Robust prediction: predict large targets using squarred loss can lead to divergence.
+    Normalizing targets based on running statistics introduces non-stationarity into the optimization.
+    The paper proposes the symlog squarred error. A neural network $f(x, \theta)$ with inputs $x$ and params $\theta$ 
+    learns to predict a transformed version of its targets $y$. To get the real prediction we just use $\hat{y}$ which 
+    is the inverse transformation.
+
+    \[
+    \loss(\theta) := \frac{1}{2} (f(x, \theta) - \text{symlog}(y))^2 \quad \hat{y} := \text{symexp}(f(x, \theta))
+    \]
+    \[
+    \text{symlog}(x) := \text{sign}(x) \ln(|x| + 1) \quad \text{symexp}(x) := \text{sign}(x) \left( \exp(|x|) -1 \right)
+    \]
+    
+    The symlog allows negative and positive values. The big absolute values are compressed, while the 
+    small absolute values are almost the same. 
+
+    For stochastic targets (rewards, returns, etc) there is the symexp twohot loss.
+    The network outputs the logits for a softmax distribution over exponentially spaced bins
+    $b_i \in B$. The network can achieve any value by a linear combination of the twohot values.
+
+    The twohot is just a generalization of onehot but for continue values to use linear combination. Every 
+    value has 0 except the two closes which sums up to 1 by the linear combination. The network is trained to 
+    minimize the categorical cross entropy loss for clasification. 
+    \[
+    \hat{y} := \text{softmax}(f(x))^\top B \quad B := \text{sympex}([-20, \dots, 20])
+    \]
+    \[
+    \loss(\theta) := -\text{twohot}(y)^\top \log \text{softmax}(f(x, \theta))
+    \]
+
+\end{itemize}
 
 
 \subsection{Assumptions}
     
 
-\subsection{Arquitectura}
+\subsection{Arquitechture}
+\begin{itemize}
+    \item The encoder and decoder consists of CNNs for image inputs and MLPs for vector inputs.
+    \item The dynamics, reward and continue predictor are MLPs.
+    \item The representations $z_t$ are sampled from a softmax distributions and we take 
+    straight-trough gradients trough sampling step. 
+\end{itemize}
 
+\section{Experiments and Results}
+\subsection{Environments or datasets}
+Dreamer was evaluated in 8 domains with over 150 tasks with fixed parameters.
+The authors tunned PPO with fixed hyperparameters to use acrros all the tasks as a baseline comparison.
+Finally, the authors disabled and tested the relevance of each component individually.
 
-\section{Experimentos}
-\subsection{Entornos o datasets}
+\begin{center}
+    \includegraphics[width=\linewidth]{pasted-images/dreamer_v3-15-41-37.png}
+\end{center}
+
+\begin{itemize}
+    \item \textbf{Atari}: 57 atari 2600 games with a budget of 200M frames.
+    Dreamer outperforms MuZero with only a fraction of computational resources. It also 
+    outperformed Rainbow and IQN.
+
+    \item   \textbf{ProcGen}: 16 games with randomized levels and visual distractions.
+    Dreamer matches PPG expert and outperforms Rainbow. 
     
-
-\subsection{Baselines}
-
-
-\subsection{Settings}
+    \item \textbf{DMLab}: 30 3D tasks with spatial and temporal reasoning. Outperforms 
+    IMPALA and R2D2+ with an efficiency of 1000\%.  
 
 
-\subsection{Nuevos escenarios}
+    \item \textbf{Atari100k}: 26 atari games with 400k frames. EfficientZero holds the state of the art 
+    with many techniques and with an early reset. Dreamer outperforms every other model. 
 
 
-\section{Resultados}
+    \item \textbf{Proprio Control}: 18 control tasks with continuous actions. Control and robotic arms. 
+    Dense and sparse rewards. Dreamer sets new state of the art.
 
 
-\subsection{¿En qué escenarios funciona mejor / peor?}
+    \item \textbf{Visual Control}: 20 continuous control tasks with images. New state of the art.
 
-\section{Discusión Crítica}
-\subsection{Fortalezas}
+    
+    \item \textbf{BSuite}: 23 environments and 468 configs. State of the art and much better in the robustness
+    category.
 
-\subsection{Debilidades} 
+    \item \textbf{Minecraft}: Collecting diamonds in minecraft. Very difficult task which consists in 
+    getting 12 items by crafting or foragning from resources with sparse rewards.
 
-\subsection{Supuestos cuestionables} 
+\end{itemize}
 
-\subsection{Qué no queda claro} 
+\section{Results}
+\begin{center}
+    \includegraphics[width=\linewidth]{pasted-images/dreamer_v3-15-40-01.png}
+\end{center}
 
-\section{Conclusiones}
+\subsection{In which escenarios it works better or worse?}
 
-\section*{Comentario Personal}
-\subsection{¿Es una buena contribución?}
+\section{Critical Discussion}
+\subsection{Strengths}
 
-\subsection{¿Lo usaría en mi investigación?}
+\subsection{Weakness} 
+
+\subsection{Cuestionable assumptions} 
+
+\subsection{Not very clear} 
+
+\section{Conclusions}
+
+\section*{Personal comment}
+\subsection{Is it a good contribution?}
+
+\subsection{Would I use it in my research?}
 
 
 \bibliographystyle{plain}
