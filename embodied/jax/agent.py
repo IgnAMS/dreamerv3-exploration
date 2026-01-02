@@ -165,7 +165,7 @@ class Agent(embodied.Agent):
         **shared_kwargs
     )
     self._report_with_video = transform.apply(
-      nj.pure(self.model.report),
+      nj.pure(self.model.nano_report),
       self.train_mesh,
       (tp, tm, ts, ts),
       (ts, tm),

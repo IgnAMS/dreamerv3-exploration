@@ -253,6 +253,72 @@ class Agent(embodied.jax.Agent):
     outs = {'tokens': tokens, 'repfeat': repfeat, 'losses': losses}
     return loss, (carry, entries, outs, metrics)
 
+  def nano_report(self, carry, data):
+    if not self.config.report:
+      return carry, {}
+
+    carry, obs, prevact, _ = self._apply_replay_context(carry, data)
+    (enc_carry, dyn_carry, dec_carry) = carry
+    B, T = obs['is_first'].shape
+    RB = min(6, B)
+    metrics = {}
+
+    # Train metrics
+    _, (new_carry, entries, outs, mets) = self.loss(
+        carry, obs, prevact, training=False)
+    mets.update(mets)
+
+    # Grad norms
+    if self.config.report_gradnorms:
+      for key in self.scales:
+        try:
+          lossfn = lambda data, carry: self.loss(
+              carry, obs, prevact, training=False)[1][2]['losses'][key].mean()
+          grad = nj.grad(lossfn, self.modules)(data, carry)[-1]
+          metrics[f'gradnorm/{key}'] = optax.global_norm(grad)
+        except KeyError:
+          print(f'Skipping gradnorm summary for missing loss: {key}')
+
+    # Open loop
+    length = T // 4
+    firsthalf = lambda xs: jax.tree.map(lambda x: x[:RB, :length], xs)
+    secondhalf = lambda xs: jax.tree.map(lambda x: x[:RB, length:], xs)
+    dyn_carry = jax.tree.map(lambda x: x[:RB], dyn_carry)
+    dec_carry = jax.tree.map(lambda x: x[:RB], dec_carry)
+    dyn_carry, _, obsfeat = self.dyn.observe(
+        dyn_carry, firsthalf(outs['tokens']), firsthalf(prevact),
+        firsthalf(obs['is_first']), training=False)
+    _, imgfeat, _ = self.dyn.imagine(
+        dyn_carry, secondhalf(prevact), length=T - length, training=False)
+    dec_carry, _, obsrecons = self.dec(
+        dec_carry, obsfeat, firsthalf(obs['is_first']), training=False)
+    dec_carry, _, imgrecons = self.dec(
+        dec_carry, imgfeat, jnp.zeros_like(secondhalf(obs['is_first'])),
+        training=False)
+
+    # Video preds
+    for key in self.dec.imgkeys:
+      assert obs[key].dtype == jnp.uint8
+      true = obs[key][:RB]
+      pred = jnp.concatenate([obsrecons[key].pred(), imgrecons[key].pred()], 1)
+      pred = jnp.clip(pred * 255, 0, 255).astype(jnp.uint8)
+      error = ((i32(pred) - i32(true) + 255) / 2).astype(np.uint8)
+      video = jnp.concatenate([true, pred, error], 2)
+
+      video = jnp.pad(video, [[0, 0], [0, 0], [2, 2], [2, 2], [0, 0]])
+      mask = jnp.zeros(video.shape, bool).at[:, :, 2:-2, 2:-2, :].set(True)
+      border = jnp.full((T, 3), jnp.array([0, 255, 0]), jnp.uint8)
+      border = border.at[length:].set(jnp.array([255, 0, 0], jnp.uint8))
+      video = jnp.where(mask, video, border[None, :, None, None, :])
+      video = jnp.concatenate([video, 0 * video[:, :10]], 1)
+
+      B, T, H, W, C = video.shape
+      grid = video.transpose((1, 2, 0, 3, 4)).reshape((T, H, B * W, C))
+      metrics[f'openloop/{key}'] = grid
+
+    carry = (*new_carry, {k: data[k][:, -1] for k in self.act_space})
+    return carry, metrics    
+
   def report(self, carry, data):
     if not self.config.report:
       return carry, {}
