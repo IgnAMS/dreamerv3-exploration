@@ -250,3 +250,7 @@ cookiepedrofull:
 cookiepedrofullfixed:
   task: cookieenv_18x29
   run: {steps: 5e4, envs: 1, train_ratio: 256}
+
+corridor:
+  task: corridor_32
+  run: {steps: 5e4, envs: 1, train_ratio: 256}
