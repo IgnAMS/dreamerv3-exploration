@@ -47,9 +47,11 @@ class SimpleEnv(embodied.Env):
 
         # build the raw env (our EmptyFixedEnv)
         if make_env:
+            if isinstance(grid_size, list):
+                kwargs.update({"height": int(grid_size[0]), "width": int(grid_size[1])})
+            else:
+                kwargs.update({"length": grid_size}) 
             self.raw = make_env(
-                height=int(grid_size[0]),
-                width=int(grid_size[1]),
                 agent_start_pos=agent_start_pos,
                 agent_start_dir=agent_start_dir,
                 max_steps=max_steps,
@@ -381,10 +383,10 @@ class CookiePedroFull(SimpleImageEnv):
         task=None,
         **kwargs
     ):
-        from cookie_env.env import CookieEnv
+        from cookie_env.envs import ThreeRooms
         super().__init__(
             task=task,
-            make_env=CookieEnv,
+            make_env=ThreeRooms,
             full_obs=True,
             rgb_img_obs="full",
             agent_start_pos=(14, 14),
@@ -399,10 +401,10 @@ class CookiePedro(SimpleImageEnv):
         task=None,
         **kwargs
     ):
-        from cookie_env.env import CookieEnv
+        from cookie_env.envs import ThreeRooms
         super().__init__(
             task=task,
-            make_env=CookieEnv,
+            make_env=ThreeRooms,
             full_obs=False,
             rgb_img_obs="partial",
             agent_start_pos=(14, 14),
@@ -417,10 +419,10 @@ class CookiePedroOneHot(SimpleEnv):
         task=None,
         **kwargs
     ):
-        from cookie_env.env import CookieEnv
+        from cookie_env.envs import ThreeRooms
         super().__init__(
             task=task,
-            make_env=CookieEnv,
+            make_env=ThreeRooms,
             agent_start_pos=(14, 14),
             onehot=True,
             max_steps=4*18*29,
@@ -433,11 +435,11 @@ class DeterministicCookie(SimpleImageEnv):
         task=None,
         **kwargs
     ):
-        from cookie_env.env import CookieEnv
+        from cookie_env.envs import ThreeRooms
         from cookie_env.utils.spawner import deterministic_corner
         super().__init__(
             task=task,
-            make_env=CookieEnv,
+            make_env=ThreeRooms,
             cookie_spawner=deterministic_corner,
             agent_start_pos=(14, 14),
             full_obs=False,
@@ -453,7 +455,7 @@ class TwoCookies(SimpleImageEnv):
         task=None,
         **kwargs
     ):
-        from cookie_env.env import CookieEnv
+        from cookie_env.envs import ThreeRooms
         from cookie_env.utils.spawner import VALID_CORNERS
         import random
         
@@ -462,7 +464,7 @@ class TwoCookies(SimpleImageEnv):
         
         super().__init__(
             task=task,
-            make_env=CookieEnv,
+            make_env=ThreeRooms,
             cookie_spawner=two_cookies_spawner,
             agent_start_pos=(14, 14),
             full_obs=False,
@@ -478,16 +480,33 @@ class CookiePedroFullFixed(SimpleImageEnv):
         task=None,
         **kwargs
     ):
-        from cookie_env.env import CookieEnv
+        from cookie_env.envs import ThreeRooms
         
         super().__init__(
             task=task,
-            make_env=CookieEnv,
+            make_env=ThreeRooms,
             agent_start_pos=(14, 14),
             full_obs=True,
             rgb_img_obs="full",
             onehot=False,
             max_steps=4*18*29,
             respawn=False,
+            **kwargs,
+        )
+        
+class Corridor(SimpleImageEnv):
+    def __init__(
+        self,
+        task,
+        **kwargs
+    ):
+        from cookie_env.envs import Corridor
+        super().__init__(
+            task=task,
+            length=30,
+            make_env=Corridor,
+            full_obs=False,
+            rgb_img_obs="partial",
+            max_steps=4*18*29,
             **kwargs,
         )

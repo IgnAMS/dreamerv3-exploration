@@ -28,6 +28,7 @@ from embodied.envs.new_minigrid import (
     TwoCookies,
     CookiePedroFull,
     CookiePedroFullFixed,
+    Corridor
 )
 
 # key->action mapping (MiniGrid classic)
@@ -104,20 +105,16 @@ def main():
 
     print("Creando env...")
     """
-    env = SimpleEmpty(
-        task=GRID_SIZE,
+    env = Corridor(
+        task="30",
         size=PIXEL_SIZE,
         resize='pillow',
-        full_obs=FULL_OBS,
-        rgb_img_obs=RGB_IMG,
         tile_size=TILE_SIZE,
         render_mode=RENDER_MODE,
-        agent_start_pos=(14, 14),
-        make_agent=CookieEnv # RawMiddlePoint
     )
     """
     env = CookiePedroFullFixed(
-        task=GRID_SIZE,
+        task="18x29",
         size=PIXEL_SIZE,
         resize='pillow',
         tile_size=TILE_SIZE,
