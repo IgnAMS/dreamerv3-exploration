@@ -104,7 +104,6 @@ def main():
     RENDER_MODE = 'rgb_array'
 
     print("Creando env...")
-    """
     env = Corridor(
         task="30",
         size=PIXEL_SIZE,
@@ -120,6 +119,7 @@ def main():
         tile_size=TILE_SIZE,
         render_mode=RENDER_MODE,
     ) 
+    """
     
     # reset and get starting obs
     obs = env.reset()

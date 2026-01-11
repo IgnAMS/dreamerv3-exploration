@@ -1,0 +1,25 @@
+numpy==1.26.4
+gym==0.26.2
+
+torch>=2.0
+torchvision
+
+tensorboard
+minigrid
+gymnasium
+torch
+matplotlib
+
+# To run
+pygame
+portal
+optax
+chex
+elements
+ninjax
+einops
+gym
+git+https://github.com/pedropalmav/cookie-env.git --no-deps --ignore-requires-python
+
+# pyenv shell 3.12.5
+# source .venvPPO/bin/activate
