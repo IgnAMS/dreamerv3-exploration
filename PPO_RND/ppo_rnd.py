@@ -632,7 +632,7 @@ def main():
     lam                 = 0.95 # Just set to 0.95
     learning_rate       = 2.5e-4 # Just set to 0.95
     ############################################# 
-    env_name            = 'CookieEnv-v0' # Set the env you want
+    env_name            = '' # Set the env you want
     env                 = gym.make(env_name)
     env = RGBImgObsWrapper(env)
     env = ImageDirectionWrapper(env)
