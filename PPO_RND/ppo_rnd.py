@@ -563,7 +563,7 @@ def run_inits_episode(env, agent, state_dim, render, n_init_episode):
     for _ in range(n_init_episode):
         action = env.action_space.sample()
         S_t = env.step(action)
-        print(len(S_t))
+        # print(len(S_t))
         next_state, reward, terminated, truncated, info = S_t
         done = terminated or truncated
         agent.save_observation(next_state)
