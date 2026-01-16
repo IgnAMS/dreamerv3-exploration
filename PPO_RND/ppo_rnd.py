@@ -5,7 +5,8 @@ from gymnasium.envs.registration import register
 import cookie_env
 from minigrid.wrappers import FullyObsWrapper, RGBImgPartialObsWrapper, RGBImgObsWrapper
 from gymnasium import spaces
-    
+import os
+from datetime import datetime
 import torch
 import torch.nn as nn
 from torch.distributions import Categorical
@@ -51,9 +52,9 @@ class ImageDirectionWrapper(gym.ObservationWrapper):
         return np.concatenate([img, direction], axis=0)
 
 class CNN_Encoder(nn.Module):
-    def __init__(self, in_channels):
+    def __init__(self, state_dim):
         super().__init__()
-
+        in_channels = state_dim[0]
         self.conv = nn.Sequential(
             nn.Conv2d(in_channels, 32, kernel_size=8, stride=4),   # ↓ fuerte
             nn.ReLU(),
@@ -64,7 +65,7 @@ class CNN_Encoder(nn.Module):
         )
 
         with torch.no_grad():
-            dummy = torch.zeros(1, in_channels, 144, 232)
+            dummy = torch.zeros(1, in_channels, state_dim[1], state_dim[2])
             out = self.conv(dummy)
             self.out_dim = out.view(1, -1).size(1)
 
@@ -276,22 +277,22 @@ class Agent():
         self.action_dim             = action_dim               
 
         in_channels = state_dim[0]
-        self.encoder_actor = CNN_Encoder(in_channels).to(device)
-        self.encoder_critic_ex = CNN_Encoder(in_channels).to(device)
-        self.encoder_critic_in = CNN_Encoder(in_channels).to(device)
-        self.encoder_rnd_pred = CNN_Encoder(in_channels).to(device)
-        self.encoder_rnd_target = CNN_Encoder(in_channels).to(device)
+        self.encoder_actor = CNN_Encoder(state_dim).to(device)
+        self.encoder_critic_ex = CNN_Encoder(state_dim).to(device)
+        self.encoder_critic_in = CNN_Encoder(state_dim).to(device)
+        self.encoder_rnd_pred = CNN_Encoder(state_dim).to(device)
+        self.encoder_rnd_target = CNN_Encoder(state_dim).to(device)
         
         self.actor                  = Actor_Model(self.encoder_actor, action_dim)
-        self.actor_old              = Actor_Model(CNN_Encoder(in_channels).to(device), action_dim)
+        self.actor_old              = Actor_Model(CNN_Encoder(state_dim).to(device), action_dim)
         self.actor_optimizer        = Adam(self.actor.parameters(), lr = learning_rate)
 
         self.ex_critic              = Critic_Model(self.encoder_critic_ex, action_dim)
-        self.ex_critic_old          = Critic_Model(CNN_Encoder(in_channels).to(device), action_dim)
+        self.ex_critic_old          = Critic_Model(CNN_Encoder(state_dim).to(device), action_dim)
         self.ex_critic_optimizer    = Adam(self.ex_critic.parameters(), lr = learning_rate)
 
         self.in_critic              = Critic_Model(self.encoder_critic_in, action_dim)
-        self.in_critic_old          = Critic_Model(CNN_Encoder(in_channels).to(device), action_dim)
+        self.in_critic_old          = Critic_Model(CNN_Encoder(state_dim).to(device), action_dim)
         self.in_critic_optimizer    = Adam(self.in_critic.parameters(), lr = learning_rate)
 
         self.rnd_predict            = RND_Model(self.encoder_rnd_pred, action_dim)
@@ -534,15 +535,23 @@ class Agent():
         self.in_critic.load_state_dict(in_critic_checkpoint['model_state_dict'])
         self.in_critic_optimizer.load_state_dict(in_critic_checkpoint['optimizer_state_dict'])
 
-def plot(datas):
+def plot(datas, name, save_dir="results_ppo_rnd"):
     print('----------')
+    os.makedirs(save_dir, exist_ok=True)
 
+    plt.figure()
     plt.plot(datas)
     plt.plot()
     plt.xlabel('Episode')
-    plt.ylabel('Datas')
-    plt.show()
-
+    plt.ylabel(name)
+    plt.title(name)
+    # plt.show()
+    
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    path = os.path.join(save_dir, f"{name}_{timestamp}.png")
+    plt.savefig(path)
+    plt.close()
+    
     print('Max :', np.max(datas))
     print('Min :', np.min(datas))
     print('Avg :', np.mean(datas))
@@ -616,7 +625,7 @@ def main():
     n_step_update       = 128 # How many steps before you update the RND. Recommended set to 128 for Discrete
     n_eps_update        = 5 # How many episode before you update the PPO. Recommended set to 5 for Discrete
     n_plot_batch        = 100000000 # How many episode you want to plot the result
-    n_episode           = 100000 # How many episode you want to run
+    n_episode           = 93 # How many episode you want to run
     n_init_episode      = 1024
     n_saved             = 10 # How many episode to run before saving the weights
 
@@ -632,8 +641,16 @@ def main():
     lam                 = 0.95 # Just set to 0.95
     learning_rate       = 2.5e-4 # Just set to 0.95
     ############################################# 
-    env_name            = '' # Set the env you want
-    env                 = gym.make(env_name)
+    # CornerEnv-v0
+    # CookieEnv-v0
+    env_name            = 'CornerEnv-v0' # Set the env you want
+    size = 52
+    env                 = gym.make(
+        env_name, 
+        size=size, 
+        max_steps=4 * size ** 2, 
+        render_mode="rgb_array"
+    )
     env = RGBImgObsWrapper(env)
     env = ImageDirectionWrapper(env)
 
@@ -692,8 +709,8 @@ def main():
 
         if i_episode % n_plot_batch == 0 and i_episode != 0:
             # Plot the reward, times for every n_plot_batch
-            plot(batch_rewards)
-            plot(batch_times)
+            plot(batch_rewards, "rewards")
+            plot(batch_times, "batch_times")
 
             for reward in batch_rewards:
                 rewards.append(reward)
@@ -706,8 +723,8 @@ def main():
 
             print('========== Cummulative ==========')
             # Plot the reward, times for every episode
-            plot(rewards)
-            plot(times)
+            plot(rewards, "cummulative rewards")
+            plot(times, "times")
 
     print('========== Final ==========')
     # Plot the reward, times for every episode
@@ -718,8 +735,10 @@ def main():
     for time in batch_times:
         times.append(time)
 
-    plot(rewards)
-    plot(times)
+    plot(rewards, "final rewards")
+    plot(times, "final times")
 
 if __name__ == '__main__':
+    # source .venvPPO/bin/activate
+    # python -m PPO_RND.ppo_rnd
     main()

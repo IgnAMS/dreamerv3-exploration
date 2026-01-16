@@ -4,6 +4,7 @@ from embodied.envs.from_gym import FromGym
 import numpy as np
 from gymnasium import spaces
 from minigrid.wrappers import FullyObsWrapper, RGBImgPartialObsWrapper, RGBImgObsWrapper
+import matplotlib.pyplot as plt
 
 class ImageDirectionWrapper(gym.ObservationWrapper):
     def __init__(self, env):
@@ -36,13 +37,21 @@ class ImageDirectionWrapper(gym.ObservationWrapper):
     
 print("\n\n")
 
-env = gym.make("CookieEnv-v0")
+env = gym.make("CornerEnv-v0", size=52)
 env = RGBImgObsWrapper(env)
 print(env.observation_space, "\n\n")
 env2 = FromGym(env, obs_key="image")
 print(env2.obs_space, "\n\n")
 
+
+
 env3 = ImageDirectionWrapper(env)
 print(env3.observation_space, "\n\n")
 obs, _ = env3.reset()
 print(obs.shape)
+
+# Solo RGB
+img = obs[:3]
+plt.imshow(img.transpose(1, 2, 0))  # CHW → HWC
+plt.axis("off")
+plt.show()
