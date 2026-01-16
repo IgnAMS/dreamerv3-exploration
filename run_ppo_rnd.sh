@@ -38,6 +38,7 @@ echo "Host      : $(hostname)"
 echo "Python    : $(which python)"
 python --version
 echo "Working dir: $(pwd)"
+pip freeze | grep -E "nvidia|jax|jaxlib" || true
 echo
 
 ########################################
@@ -74,3 +75,4 @@ echo
 echo "====================================="
 echo "Entrenamiento finalizado"
 echo "====================================="
+# ts -G 1 bash run_ppo_rnd.sh

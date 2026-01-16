@@ -13,6 +13,7 @@ from torch.distributions import Categorical
 from torch.distributions.kl import kl_divergence
 from torch.utils.data import Dataset, DataLoader
 from torch.optim import Adam
+from collections import deque
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -151,10 +152,13 @@ class RND_Model(nn.Module):
         features = self.encoder(states)
         return self.nn_layer(features)
 
+DEFAULT_MAX_OBS = 100_000
+DEFAULT_MAX_TRANS = 200_000
+
 class ObsMemory(Dataset):
     def __init__(self, state_dim):
-        self.observations    = []
-
+        # self.observations    = []
+        self.observations       = deque(maxlen=DEFAULT_MAX_OBS)
         self.mean_obs           = torch.zeros(state_dim).to(device)
         self.std_obs            = torch.zeros(state_dim).to(device)
         self.std_in_rewards     = torch.zeros(1).to(device)
@@ -187,12 +191,19 @@ class ObsMemory(Dataset):
 
 class Memory(Dataset):
     def __init__(self):
+        self.states = deque(maxlen=DEFAULT_MAX_TRANS)
+        self.actions = deque(maxlen=DEFAULT_MAX_TRANS)
+        self.rewards = deque(maxlen=DEFAULT_MAX_TRANS)
+        self.dones = deque(maxlen=DEFAULT_MAX_TRANS)
+        self.next_states = deque(maxlen=DEFAULT_MAX_TRANS)
+        """
         self.actions        = [] 
         self.states         = []
         self.rewards        = []
         self.dones          = []     
         self.next_states    = []
-
+        """
+        
     def __len__(self):
         return len(self.dones)
 
@@ -330,7 +341,8 @@ class Agent():
         self.obs_memory.save_eps(obs)
 
     def update_obs_normalization_param(self, obs):
-        obs                 = torch.FloatTensor(obs).to(device).detach()
+        obs = torch.from_numpy(np.asarray(obs)).float().to(device)
+        # obs                 = torch.FloatTensor(obs).to(device).detach()
 
         mean_obs            = self.utils.count_new_mean(self.obs_memory.mean_obs, self.obs_memory.total_number_obs, obs)
         std_obs             = self.utils.count_new_std(self.obs_memory.std_obs, self.obs_memory.total_number_obs, obs)
