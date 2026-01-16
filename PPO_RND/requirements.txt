@@ -19,7 +19,8 @@ elements
 ninjax
 einops
 gym
-git+https://github.com/pedropalmav/cookie-env.git --no-deps --ignore-requires-python
+git+https://github.com/pedropalmav/cookie-env.git 
+# --no-deps --ignore-requires-python
 
 # pyenv shell 3.12.5
 # source .venvPPO/bin/activate
