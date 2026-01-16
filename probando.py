@@ -28,7 +28,8 @@ from embodied.envs.new_minigrid import (
     TwoCookies,
     CookiePedroFull,
     CookiePedroFullFixed,
-    Corridor
+    Corridor,
+    TwoRooms
 )
 
 # key->action mapping (MiniGrid classic)
@@ -104,6 +105,7 @@ def main():
     RENDER_MODE = 'rgb_array'
 
     print("Creando env...")
+    """
     env = Corridor(
         task="30",
         size=PIXEL_SIZE,
@@ -112,14 +114,14 @@ def main():
         render_mode=RENDER_MODE,
     )
     """
-    env = CookiePedroFullFixed(
+    env = TwoRooms(
         task="18x29",
         size=PIXEL_SIZE,
         resize='pillow',
         tile_size=TILE_SIZE,
         render_mode=RENDER_MODE,
     ) 
-    """
+    
     
     # reset and get starting obs
     obs = env.reset()

@@ -510,3 +510,22 @@ class Corridor(SimpleImageEnv):
             max_steps=4*18*29,
             **kwargs,
         )
+
+class TwoRooms(SimpleImageEnv):
+    def __init__(
+        self,
+        task,
+        **kwargs
+    ):
+        from cookie_env.envs import TwoRooms
+        from cookie_env.utils.spawner import deterministic_corner
+        super().__init__(
+            task=task,
+            make_env=TwoRooms,
+            agent_start_pos=(14,14),
+            full_obs=False,
+            rgb_img_obs="partial",
+            max_steps=4*18*29,
+            cookie_spawner=deterministic_corner,
+            **kwargs,
+        )
