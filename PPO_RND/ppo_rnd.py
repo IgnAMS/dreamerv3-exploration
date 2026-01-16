@@ -187,7 +187,7 @@ class ObsMemory(Dataset):
         self.total_number_rwd   = total_number_rwd
 
     def clear_memory(self):
-        del self.observations[:]
+        self.observations.clear()
 
 class Memory(Dataset):
     def __init__(self):
@@ -218,11 +218,11 @@ class Memory(Dataset):
         self.next_states.append(next_state)       
 
     def clear_memory(self):
-        del self.actions[:]
-        del self.states[:]
-        del self.rewards[:]
-        del self.dones[:]
-        del self.next_states[:]
+        self.states.clear()
+        self.actions.clear()
+        self.rewards.clear()
+        self.dones.clear()
+        self.next_states.clear()
 
 class Distributions():
     def sample(self, datas):
