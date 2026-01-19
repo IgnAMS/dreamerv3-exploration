@@ -152,8 +152,8 @@ class RND_Model(nn.Module):
         features = self.encoder(states)
         return self.nn_layer(features)
 
-DEFAULT_MAX_OBS = 100_000
-DEFAULT_MAX_TRANS = 200_000
+DEFAULT_MAX_OBS = 50_000
+DEFAULT_MAX_TRANS = 50_000
 
 class ObsMemory(Dataset):
     def __init__(self, state_dim):
@@ -172,8 +172,14 @@ class ObsMemory(Dataset):
         return np.array(self.observations[idx], dtype = np.float32)
 
     def get_all(self):
-        return torch.FloatTensor(self.observations)
-
+        # return torch.FloatTensor(self.observations)
+        try:
+            arr = np.stack(self.observations).astype(np.float32)
+        except Exception:
+            arr = np.asarray(self.observations, dtype=np.float32)
+        t = torch.from_numpy(arr)
+        return t
+        
     def save_eps(self, obs):
         self.observations.append(obs)
 
