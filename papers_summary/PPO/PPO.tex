@@ -1,0 +1,195 @@
+\documentclass[11pt,a4paper]{article}
+
+% --------------------
+% Paquetes básicos
+% --------------------
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage[english]{babel}
+
+\usepackage{amsmath, amssymb}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{hyperref}
+\usepackage{cite}
+
+
+% Márgenes
+\usepackage{geometry}
+
+
+\renewcommand{\thesubsection}{\arabic{subsection}}
+\setcounter{secnumdepth}{1} % Comentar para que aparezcan los números en los subsections 
+
+\geometry{margin=2.5cm}
+
+% Espaciado
+\usepackage{setspace}
+\onehalfspacing
+
+\title{\textbf{Summary of the paper:}\\
+\large Proximal Policy Optimization Algorithms}
+
+\author{Ignacio Monardes}
+
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\section*{Referencia}
+\noindent
+\textbf{Authors:} John Schulman, Filip Wolski, Prafulla Dhariwal, Alec Radford, Oleg Klimov \\
+\textbf{Title:} \textit{Proximal Policy Optimization Algorithms} \\
+\textbf{Conference/Journal:}  \\
+\textbf{Link:} \url{https://arxiv.org/pdf/1707.06347}
+
+\section{Motivation}
+\subsection{Current Problem} 
+
+TRPO is very complex to implement in many scenarios and bad with noisy environments. 
+Deep Q-Learning is difficult is not very good on many simple and continuous tasks.
+
+There is room for a robust, scalable and efficient model.
+
+\subsection{Relevance of the problem}
+
+An scalable algorithm for many environments and easy to implement.
+
+\subsection{Hole in the literature / Previous limitations}
+
+
+\section{Main Idea}
+\subsection{Reinforce Gradient}
+
+First of all, the expected value to maximize is:
+\[
+J(\theta) = \mathbb{E}_{\tau \sim \pi_\theta} [ R(\tau) ]
+= \sum_{\tau} p_\theta(\tau) R(\tau)
+\]
+
+We can notice that:
+\[
+\nabla_\theta p(\tau) = p(\tau) \nabla_\theta \log p(\tau) 
+\]
+
+Demonstration:
+\[
+\nabla_\theta \log p(\tau) = \frac{\nabla_\theta p(\tau)}{p(\tau)}
+\Rightarrow
+\nabla_\theta p(\tau) = p(\tau)\nabla_\theta \log p(\tau)
+\]
+
+The probability of a trajectory $\tau$ is defined by:
+\begin{align*}
+    p_\theta(\tau) &= p(s_0) \prod_{t} \pi_\theta(a_t \mid s_t) p(s_{t+1} \mid s_t, a_t)   \\
+    \log p_\theta(\tau) &= \log p(s_0) + \sum_{t} \log \pi_\theta(a_t \mid s_t) + \sum_t \log p(s_{t+1} \mid s_t, a_t)   \\
+    \nabla_\theta \log p_\theta(\tau) &= \sum_{t} \nabla_\theta \log \pi_\theta(a_t \mid s_t) 
+\end{align*}
+
+Then:
+\[
+\nabla_\theta J(\theta) = \mathbb{E}\left[
+    \sum_t \nabla_\theta \log \pi_\theta(a_t \mid s_t) G_t
+\right]
+\]
+
+We can make rest a bias and define the advantage $A(s_t, a_t) := Q(s_t, a_t) - V(s_t)$, resulting in:
+\[
+\hat{g} = \hat{\mathbb{E}}_t\left[ 
+    \nabla_\theta \log \pi_\theta(a_t \mid s_t) \hat{A}_t
+\right]
+\]
+
+\subsection{TRPO}
+TRPO maximizes this problem:
+\begin{align*}
+    \max_\theta &\quad  \hat{\mathbb{E}}_t \left[ \frac{ \pi_\theta(a_t \mid s_t)}{ \pi_{\theta_\text{old}}(a_t \mid s_t) } \hat{A}_t \right] \\
+    \text{subject to} & \quad \hat{\mathbb{E}}_t[KL[\pi_{\theta_\text{old}} (\cdot \mid s_t), \pi_\theta(\cdot \mid s_t)]] \leq \delta
+\end{align*}
+with a hard constraint over the restriction.
+
+Theorically we could use the restriction on the function with a coefficient $\beta$:
+\begin{align*}
+    \max_\theta &\quad  \hat{\mathbb{E}}_t \left[ \frac{ \pi_\theta(a_t \mid s_t)}{ \pi_{\theta_\text{old}}(a_t \mid s_t) } \hat{A}_t - \beta KL[\pi_{\theta_\text{old}} (\cdot \mid s_t), \pi_\theta(\cdot \mid s_t)] \right]
+\end{align*}
+this would make a lower bound of the value.
+
+The problem here is that $\beta$ shouldn't be fixed and with additional modfications to Stochastic Gradient Descent.
+
+
+\subsection{Innovation: CLIP, Adaptative KL}
+We define the ratio $r_t(\theta) := \frac{\pi_\theta(a_t \mid s_t)}{ \pi_{\theta_\text{old}}(a_t \mid s_t)}$.
+
+TRPO maximizes a surrogate objective:
+\[
+L^{CPI}(\theta) = \hat{\mathbb{E}}_t\left[ 
+    \frac{\pi_\theta(a_t \mid s_t)}{ \pi_{\theta_\text{old}}(a_t \mid s_t)} \hat{A}_t 
+ \right] = \hat{\mathbb{E}}_t[r_t(\theta) \hat{A}_t]
+\]
+where CPI refers to \textit{Conservative Policy Iteration}. But the gradient could be very large. So we clipped it.
+\[
+L^{CLIP}(\theta) = \hat{\mathbb{E}}\left[ \min\left(
+    r_t(\theta)\hat{A}_t, clip(r_t(\theta), 1-\varepsilon, 1+\varepsilon) \hat{A}_t
+\right) \right]
+\]
+This allows to move the gradient in no more than the range $[1 - \varepsilon, 1 + \varepsilon]$, and as we take the minnimum
+we create a lower bound.
+\begin{center}
+    \includegraphics[width=\linewidth]{pasted-images/PPO-16-28-55.png}
+\end{center}
+
+
+
+\section{Methodology}
+
+\subsection{Modeling} 
+
+
+\subsection{Assumptions}
+    
+
+\subsection{Architecture}
+
+
+\section{Experiments}
+\subsection{Environments or datasets}
+    
+
+\subsection{Baselines}
+
+
+\subsection{Settings}
+
+
+\subsection{New Scenarios}
+
+
+\section{Results}
+
+
+\subsection{¿En qué escenarios funciona mejor / peor?}
+
+\section{Discusión Crítica}
+\subsection{Fortalezas}
+
+\subsection{Debilidades} 
+
+\subsection{Supuestos cuestionables} 
+
+\subsection{Qué no queda claro} 
+
+\section{Conclusiones}
+
+\section*{Comentario Personal}
+\subsection{¿Es una buena contribución?}
+
+\subsection{¿Lo usaría en mi investigación?}
+
+
+\bibliographystyle{plain}
+\bibliography{references}
+
+\end{document}

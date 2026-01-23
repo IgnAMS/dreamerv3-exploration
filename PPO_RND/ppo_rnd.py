@@ -55,24 +55,28 @@ class ImageDirectionWrapper(gym.ObservationWrapper):
 class CNN_Encoder(nn.Module):
     def __init__(self, state_dim):
         super().__init__()
+        # recieves: (C + n_dir, H, W)
+        # gives as output: 
         in_channels = state_dim[0]
         self.conv = nn.Sequential(
-            nn.Conv2d(in_channels, 32, kernel_size=8, stride=4),   # ↓ fuerte
+            nn.Conv2d(in_channels, 32, kernel_size=8, stride=4), # (7, 52, 52) -> (32, 12, 12)
             nn.ReLU(),
-            nn.Conv2d(32, 64, kernel_size=4, stride=2),            # ↓
+            nn.Conv2d(32, 64, kernel_size=4, stride=2), # (32, 12, 12) -> (64, 5, 5)
             nn.ReLU(),
-            nn.Conv2d(64, 64, kernel_size=3, stride=1),
+            nn.Conv2d(64, 64, kernel_size=3, stride=1), # (64, 5, 5) -> (64, 3, 3)
             nn.ReLU(),
         )
-
+        
+        # Conseguimos el out_dim de forma automatica sin hardcodeo
         with torch.no_grad():
             dummy = torch.zeros(1, in_channels, state_dim[1], state_dim[2])
             out = self.conv(dummy)
             self.out_dim = out.view(1, -1).size(1)
 
     def forward(self, x):
+        # returns: (B, 576)
         x = self.conv(x)
-        return x.view(x.size(0), -1)
+        return x.view(x.size(0), -1) # (64, 3, 3) -> (576)
 
 class Utils():
     def prepro(self, I):
@@ -152,8 +156,8 @@ class RND_Model(nn.Module):
         features = self.encoder(states)
         return self.nn_layer(features)
 
-DEFAULT_MAX_OBS = 50_000
-DEFAULT_MAX_TRANS = 50_000
+DEFAULT_MAX_OBS = 10_000
+DEFAULT_MAX_TRANS = 10_000
 
 class ObsMemory(Dataset):
     def __init__(self, state_dim):
@@ -171,6 +175,7 @@ class ObsMemory(Dataset):
     def __getitem__(self, idx):
         return np.array(self.observations[idx], dtype = np.float32)
 
+    """
     def get_all(self):
         # return torch.FloatTensor(self.observations)
         try:
@@ -179,6 +184,7 @@ class ObsMemory(Dataset):
             arr = np.asarray(self.observations, dtype=np.float32)
         t = torch.from_numpy(arr)
         return t
+    """
         
     def save_eps(self, obs):
         self.observations.append(obs)
@@ -202,13 +208,6 @@ class Memory(Dataset):
         self.rewards = deque(maxlen=DEFAULT_MAX_TRANS)
         self.dones = deque(maxlen=DEFAULT_MAX_TRANS)
         self.next_states = deque(maxlen=DEFAULT_MAX_TRANS)
-        """
-        self.actions        = [] 
-        self.states         = []
-        self.rewards        = []
-        self.dones          = []     
-        self.next_states    = []
-        """
         
     def __len__(self):
         return len(self.dones)
@@ -347,7 +346,7 @@ class Agent():
         self.obs_memory.save_eps(obs)
 
     def update_obs_normalization_param(self, obs):
-        obs = torch.from_numpy(np.asarray(obs)).float().to(device)
+        obs = torch.from_numpy(np.asarray(obs)).float()
         # obs                 = torch.FloatTensor(obs).to(device).detach()
 
         mean_obs            = self.utils.count_new_mean(self.obs_memory.mean_obs, self.obs_memory.total_number_obs, obs)
@@ -355,7 +354,9 @@ class Agent():
         total_number_obs    = len(obs) + self.obs_memory.total_number_obs
         
         self.obs_memory.save_observation_normalize_parameter(mean_obs, std_obs, total_number_obs)
-    
+        del obs
+        
+        
     def update_rwd_normalization_param(self, in_rewards):
         std_in_rewards      = self.utils.count_new_std(self.obs_memory.std_in_rewards, self.obs_memory.total_number_rwd, in_rewards)
         total_number_rwd    = len(in_rewards) + self.obs_memory.total_number_rwd
@@ -493,30 +494,76 @@ class Agent():
         dataloader  = DataLoader(self.obs_memory, batch_size, shuffle = False)        
 
         # Optimize policy for K epochs:
-        for _ in range(self.RND_epochs):       
+        """ Mucho gasto de memoria!
+        for _ in range(self.RND_epochs):
             for obs in dataloader:
                 self.training_rnd(obs.float().to(device), self.obs_memory.mean_obs.float().to(device), self.obs_memory.std_obs.float().to(device))       
-
-        intrinsic_rewards = self.compute_intrinsic_reward(self.obs_memory.get_all().to(device), self.obs_memory.mean_obs.to(device), self.obs_memory.std_obs.to(device))
+        
+        intrinsic_rewards = self.compute_intrinsic_reward(
+            self.obs_memory.get_all().to(device), 
+            self.obs_memory.mean_obs.to(device), 
+            self.obs_memory.std_obs.to(device)
+        )
+        """
+        
+        mean_obs = self.obs_memory.mean_obs.to(device)
+        std_obs  = self.obs_memory.std_obs.to(device)
+        
+        for _ in range(self.RND_epochs):
+            for obs in dataloader:
+                obs = obs.float().to(device, non_blocking=True)
+                self.training_rnd(obs, mean_obs, std_obs)
+                del obs
+        
+        with torch.no_grad():
+            for obs in dataloader:
+                obs = obs.float().to(device, non_blocking=True)
+                r_i = self.compute_intrinsic_reward(obs, mean_obs, std_obs)
+                intrinsic_rewards.append(r_i.cpu())   # ⬅️ vuelve a CPU
+                del obs, r_i
+                
+        intrinsic_rewards = torch.cat(intrinsic_rewards, dim=0)
         
         self.update_obs_normalization_param(self.obs_memory.observations)
         self.update_rwd_normalization_param(intrinsic_rewards)
 
         # Clear the memory
+        del intrinsic_rewards
+        del mean_obs, std_obs
+        torch.cuda.empty_cache()
         self.obs_memory.clear_memory()
 
     # Update the model
     def update_ppo(self):        
         batch_size  = int(len(self.memory) / self.minibatch)
         dataloader  = DataLoader(self.memory, batch_size, shuffle = False)
-
+        mean_obs_dev = self.obs_memory.mean_obs.to(device)
+        std_obs_dev  = self.obs_memory.std_obs.to(device)
+        std_in_rwd_dev = self.obs_memory.std_in_rewards.to(device)
+        
         # Optimize policy for K epochs:
         for _ in range(self.PPO_epochs):       
             for states, actions, rewards, dones, next_states in dataloader:
-                self.training_ppo(states.float().to(device), actions.float().to(device), rewards.float().to(device), dones.float().to(device), next_states.float().to(device),
-                    self.obs_memory.mean_obs.float().to(device), self.obs_memory.std_obs.float().to(device), self.obs_memory.std_in_rewards.float().to(device))
-
+                states_dev      = states.float().to(device, non_blocking=True)
+                actions_dev     = actions.float().to(device, non_blocking=True)
+                rewards_dev     = rewards.float().to(device, non_blocking=True)
+                dones_dev       = dones.float().to(device, non_blocking=True)
+                next_states_dev = next_states.float().to(device, non_blocking=True)
+                self.training_ppo(
+                    states_dev, 
+                    actions_dev, 
+                    rewards_dev, 
+                    dones_dev, 
+                    next_states_dev,
+                    mean_obs_dev, 
+                    std_obs_dev, 
+                    std_in_rwd_dev
+                )
+                del states_dev, actions_dev, rewards_dev, dones_dev, next_states_dev
+                
         # Clear the memory
+        del mean_obs_dev, std_obs_dev, std_in_rwd_dev
+        torch.cuda.empty_cache()
         self.memory.clear_memory()
 
         # Copy new weights into old policy:
@@ -584,6 +631,9 @@ def run_inits_episode(env, agent, state_dim, render, n_init_episode):
         # print(len(S_t))
         next_state, reward, terminated, truncated, info = S_t
         done = terminated or truncated
+        
+        # para size=52:
+        # ≈ (3 + 4, 52, 52) = (7, 52, 52)
         agent.save_observation(next_state)
 
         if render:
@@ -642,7 +692,7 @@ def main():
     render              = False # If you want to display the image, set this to True. Turn this off if you run this in Google Collab
     n_step_update       = 128 # How many steps before you update the RND. Recommended set to 128 for Discrete
     n_eps_update        = 5 # How many episode before you update the PPO. Recommended set to 5 for Discrete
-    n_plot_batch        = 100000000 # How many episode you want to plot the result
+    n_plot_batch        = 93 # How many episode you want to plot the result
     n_episode           = 93 # How many episode you want to run
     n_init_episode      = 1024
     n_saved             = 10 # How many episode to run before saving the weights
@@ -652,8 +702,8 @@ def main():
     value_clip          = 1.0 # How many value will be clipped. Recommended set to the highest or lowest possible reward
     entropy_coef        = 0.05 # How much randomness of action you will get
     vf_loss_coef        = 1.0 # Just set to 1
-    minibatch           = 1 # How many batch per update. size of batch = n_update / minibatch. Recommended set to 4 for Discrete
-    PPO_epochs          = 4 # How many epoch per update. Recommended set to 10 for Discrete
+    minibatch           = 8 # How many batch per update. size of batch = n_update / minibatch. Recommended set to 4 for Discrete
+    PPO_epochs          = 10 # How many epoch per update. Recommended set to 10 for Discrete
     
     gamma               = 0.99 # Just set to 0.99
     lam                 = 0.95 # Just set to 0.95
