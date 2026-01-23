@@ -346,7 +346,7 @@ class Agent():
         self.obs_memory.save_eps(obs)
 
     def update_obs_normalization_param(self, obs):
-        obs = torch.from_numpy(np.asarray(obs)).float()
+        obs = torch.from_numpy(np.asarray(obs)).float().to(device)
         # obs                 = torch.FloatTensor(obs).to(device).detach()
 
         mean_obs            = self.utils.count_new_mean(self.obs_memory.mean_obs, self.obs_memory.total_number_obs, obs)
