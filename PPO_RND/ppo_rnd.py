@@ -514,7 +514,8 @@ class Agent():
                 obs = obs.float().to(device, non_blocking=True)
                 self.training_rnd(obs, mean_obs, std_obs)
                 del obs
-        
+                
+        intrinsic_rewards = []
         with torch.no_grad():
             for obs in dataloader:
                 obs = obs.float().to(device, non_blocking=True)
