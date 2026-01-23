@@ -92,6 +92,9 @@ class Utils():
         return ((prevMean * prevLen) + newData.sum(0)) / (prevLen + newData.shape[0])
       
     def count_new_std(self, prevStd, prevLen, newData):
+        # NOTA: esto corre en CPU para intrinsic reward
+        newData = newData.to(prevStd.device)
+        prevLen = prevLen.to(prevStd.device)
         return (((prevStd.pow(2) * prevLen) + (newData.var(0) * newData.shape[0])) / (prevLen + newData.shape[0])).sqrt()
 
     def normalize(self, data, mean = None, std = None, clip = None):
