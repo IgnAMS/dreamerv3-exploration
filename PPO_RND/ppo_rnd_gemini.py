@@ -10,11 +10,13 @@ from torch.distributions import Categorical
 from gymnasium import spaces
 from minigrid.wrappers import RGBImgObsWrapper, ImgObsWrapper
 from configs import MODEL_SIZES
+import os
+import json
+import pandas as pd
+from datetime import datetime
 
 # Configuración de dispositivo
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
-
 
 # --- 1. Utilidades y Normalización ---
 class RunningMeanStd:
@@ -187,7 +189,9 @@ class PPO_RND_Agent:
         self.gamma_int = config['gamma_int'] # Generalmente 0.99
         self.gae_lambda = config['gae_lambda']
         self.coef_int = config['coef_int'] # Beta (peso de recompensa intrinseca)
-        self.clip_coef = 0.1
+        self.n_opt = config['n_opt']
+        self.clip_coef = config["clip_coef"]
+        self.num_minibatches = config["num_minibatches"]
         self.ent_coef = 0.001
         
         # Modelos
@@ -350,9 +354,10 @@ class PPO_RND_Agent:
 
         # Optimization epochs
         batch_size = self.n_steps * self.n_envs
+        minibatch_size = batch_size // self.num_minibatches
         inds = np.arange(batch_size)
         
-        for _ in range(4): # 4 épocas de PPO
+        for _ in range(self.n_opt): # 4 épocas de PPO
             np.random.shuffle(inds)
             # Minibatch loop (simplified)
             # Para GRU real, idealmente procesaríamos secuencias completas, 
@@ -424,7 +429,7 @@ class PPO_RND_Agent:
         return loss.item(), avg_intrinsic_reward
 
 
-def plot_learning_curve(ext_history, int_history):
+def plot_learning_curve(ext_history, int_history, save_path):
     fig, ax1 = plt.subplots(figsize=(10, 6))
 
     # Eje para Recompensa Extrínseca (El éxito en el juego)
@@ -443,8 +448,8 @@ def plot_learning_curve(ext_history, int_history):
 
     plt.title('Progreso de PPO + RND en MiniGrid')
     fig.tight_layout()
-    plt.savefig("entrenamiento_ppo_rnd.png")
-    plt.show()
+    plt.savefig(save_path)
+    plt.close(fig)
     
 def print_model_summary(model, model_name="Model"):
     print(f"\n{'='*20} {model_name} Summary {'='*20}")
@@ -465,12 +470,45 @@ def print_model_summary(model, model_name="Model"):
     print(f"Model Size: {total_params * 4 / (1024**2):.2f} MB")
     print(f"{'='*75}\n")
 
+
+def save_results(agent, config, ext_history, int_history):
+    # 1. Crear directorio único basado en la fecha y hora
+    run_id = datetime.now().strftime("%Y%m%d_%H%M%S")
+    save_dir = f"runs_ppo_rnd/run_{run_id}"
+    os.makedirs(save_dir, exist_ok=True)
+    
+    # 2. Guardar Config e Hiperparámetros (JSON)
+    with open(f"{save_dir}/config.json", "w") as f:
+        json.dump(config, f, indent=4)
+    
+    # 3. Guardar Pesos de los Modelos (Lo más importante para reutilizarlo)
+    torch.save({
+        'actor_critic_state_dict': agent.ac.state_dict(),
+        'rnd_predictor_state_dict': agent.rnd.predictor.state_dict(),
+        'optimizer_state_dict': agent.optimizer.state_dict(),
+    }, f"{save_dir}/agent_weights.pt")
+    
+    # 4. Guardar Datos Crudos (CSV) por si quieres analizar luego
+    df = pd.DataFrame({
+        'iteration': range(len(ext_history)),
+        'extrinsic_reward': ext_history,
+        'intrinsic_reward': int_history
+    })
+    df.to_csv(f"{save_dir}/logs.csv", index=False)
+    
+    # 5. Guardar el Gráfico
+    plot_learning_curve(ext_history, int_history, save_path=f"{save_dir}/learning_curve.png")
+    
+    print(f"\n✅ Resultados guardados en: {save_dir}")
+    return save_dir
+
+
 # --- 4. Loop Principal ---
 
 def main(config):
     # Crear entorno (vectorizado)
     def make_env():
-        env = gym.make("MiniGrid-MultiRoom-N2-S4-v0", render_mode="rgb_array")
+        env = gym.make("MiniGrid-Empty-5x5-v0", render_mode="rgb_array")
         env = RGBImgObsWrapper(env) # Necesitamos pixeles para la CNN
         env = ImgObsWrapper(env)
         env = gym.wrappers.ResizeObservation(env, (84, 84))
@@ -495,7 +533,7 @@ def main(config):
     
     
     print("Iniciando entrenamiento PPO + RND...")
-    for iteration in range(config["iters"]):
+    for iteration in range(config["n_rollouts"]):
         # 1. Colectar datos
         buffer, next_val_ext, next_val_int = agent.rollout()
         
@@ -512,39 +550,46 @@ def main(config):
                     episode_rewards[idx] = 0
         # Guardar promedio de los últimos episodios para graficar
         if len(final_rewards_list) > 0:
-            extrinsic_rewards_history.append(np.mean(final_rewards_list[-10:]))
+            current_avg_ext = np.mean(final_rewards_list[-10:])
         else:
-            extrinsic_rewards_history.append(0)
+            current_avg_ext = 0
         
+        extrinsic_rewards_history.append(current_avg_ext)
         intrinsic_rewards_history.append(avg_int_reward)
         
         if iteration % 10 == 0:
-            print(f"Iter: {iteration} | Loss: {loss:.3f} | Avg Intrinsic Reward: {avg_int_reward:.5f}")
+            print(f"Iter: {iteration:4} | "
+                  f"Loss: {loss:.3f} | "
+                  f"Avg Ext: {current_avg_ext:.3f} | "
+                  f"Avg Int: {avg_int_reward:.6f}")
     
-    plot_learning_curve(extrinsic_rewards_history, intrinsic_rewards_history)
+    # plot_learning_curve(extrinsic_rewards_history, intrinsic_rewards_history)
+    save_results(agent, config, extrinsic_rewards_history, intrinsic_rewards_history)
     envs.close()
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="PPO + RND Training")
     
     # --- Parámetros de Ejecución ---
-    parser.add_argument("--iters", type=int, default=1000, help="Número de actualizaciones (rollouts)")
+    parser.add_argument("--n_rollouts", type=int, default=5000, help="Número de actualizaciones (rollouts)")
     parser.add_argument("--n_envs", type=int, default=4, help="Entornos en paralelo")
+    parser.add_argument("--run", type=int, default=1, help="Número de ejecución")
     parser.add_argument("--n_steps", type=int, default=128, help="Pasos por rollout")
     parser.add_argument("--seed", type=int, default=42, help="Semilla aleatoria")
     
     # --- Hiperparámetros RL ---
     parser.add_argument("--size", type=str, default="small", choices=["tiny", "small", "large"])
+    parser.add_argument("--num_minibatches", type=int, default=4, help="Número de fragmentos en que se divide el rollout")
     parser.add_argument("--lr", type=float, default=1e-4, help="Learning Rate")
     parser.add_argument("--gamma", type=float, default=0.99, help="Factor de descuento extrínseco")
     parser.add_argument("--gamma_int", type=float, default=0.99, help="Factor de descuento intrínseco")
     parser.add_argument("--gae_lambda", type=float, default=0.95, help="Lambda para GAE")
     parser.add_argument("--coef_int", type=float, default=0.1, help="Peso de la curiosidad (Beta)")
+    parser.add_argument("--n_opt", type=int, default=4, help="Número de actualizaciones PPOf ")
     parser.add_argument("--ent_coef", type=float, default=0.001, help="Coeficiente de Entropía")
+    parser.add_argument("--clip_coef", type=float, default=0.1, help="Coeficiente de Clipping")
 
     args = parser.parse_args()
     config = vars(args)
-    config["size_cfg"] = MODEL_SIZES[config["size"]]    
-    
-    
+    config["size_cfg"] = MODEL_SIZES[config["size"]]
     main(config)

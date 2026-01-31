@@ -21,6 +21,7 @@ einops
 gym
 git+https://github.com/pedropalmav/cookie-env.git 
 opencv-python
+pandas
 # --no-deps --ignore-requires-python
 
 # pyenv shell 3.12.5
