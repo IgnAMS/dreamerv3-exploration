@@ -5,14 +5,14 @@ set -euo pipefail
 # Configuración
 ########################################
 
-# Ruta absoluta al proyecto (ajústala si es necesario)
+# Ruta absoluta al proyecto
 PROJECT_ROOT="/home/iamonardes/dreamerv3-exploration"
 
 # Virtualenv
 VENV="${PROJECT_ROOT}/.venvPPO"
 
-# Script a ejecutar
-SCRIPT="${PROJECT_ROOT}/PPO_RND/ppo_rnd.py"
+# Script a ejecutar (ACTUALIZADO AL NUEVO NOMBRE)
+SCRIPT="${PROJECT_ROOT}/PPO_RND/ppo_rnd_gemini.py"
 
 ########################################
 # Activación del entorno
@@ -21,9 +21,10 @@ SCRIPT="${PROJECT_ROOT}/PPO_RND/ppo_rnd.py"
 if [ -d "$VENV" ]; then
   echo "[INFO] Activando virtualenv: $VENV"
   # shellcheck disable=SC1090
-  . "${VENV}/bin/activate"
+  source "${VENV}/bin/activate"
 else
-  echo "[WARN] Virtualenv no encontrado en $VENV"
+  echo "[ERROR] Virtualenv no encontrado en $VENV. Abortando."
+  exit 1
 fi
 
 ########################################
@@ -33,46 +34,52 @@ fi
 echo "====================================="
 echo "Running PPO + RND Training"
 echo "====================================="
-echo "User      : $(whoami)"
-echo "Host      : $(hostname)"
-echo "Python    : $(which python)"
+echo "User       : $(whoami)"
+echo "Python     : $(which python)"
 python --version
-echo "Working dir: $(pwd)"
-pip freeze | grep -E "nvidia|jax|jaxlib" || true
+echo "Script     : ${SCRIPT}"
 echo
 
 ########################################
-# GPU info (opcional)
+# GPU info (Ajustado para detectar Mac/Nvidia)
 ########################################
 
 if command -v nvidia-smi &> /dev/null; then
-  echo "GPUs (nvidia-smi):"
-  nvidia-smi --query-gpu=gpu_name,memory.total,driver_version --format=csv
+  echo "[GPU] Detectada NVIDIA:"
+  nvidia-smi --query-gpu=gpu_name,memory.total --format=csv,noheader
+elif [[ "$OSTYPE" == "darwin"* ]]; then
+  echo "[GPU] Detectado Apple Silicon (MPS)"
 else
-  echo "[INFO] nvidia-smi no disponible"
+  echo "[INFO] No se detectó aceleración de hardware externa"
 fi
 echo
 
 ########################################
-# Variables de entorno (PyTorch)
+# Variables de entorno
 ########################################
 
+# Evita que Python genere archivos .pyc que ensucian el repo
+export PYTHONDONTWRITEBYTECODE=1
+# Optimización de hilos
 export OMP_NUM_THREADS=4
-export MKL_NUM_THREADS=4
-export TF_CPP_MIN_LOG_LEVEL=3
-export CUDA_DEVICE_ORDER=PCI_BUS_ID
 
 ########################################
 # Ejecución
 ########################################
 
-echo "Ejecutando: python ${SCRIPT}"
+echo "Iniciando proceso..."
 echo "-------------------------------------"
 
-python "${SCRIPT}"
+# Ejecutamos el script
+if [ $# -gt 0 ]; then
+    echo "Ejecutando comando externo: $@"
+    "$@"
+else
+    echo "Ejecutando script por defecto: python ${SCRIPT}"
+    python "${SCRIPT}"
+fi
 
 echo
 echo "====================================="
-echo "Entrenamiento finalizado"
+echo "Entrenamiento finalizado correctamente"
 echo "====================================="
-# ts -G 1 bash run_ppo_rnd.sh
