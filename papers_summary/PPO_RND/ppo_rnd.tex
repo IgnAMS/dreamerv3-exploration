@@ -1,0 +1,232 @@
+\documentclass[11pt,a4paper]{article}
+
+% --------------------
+% Paquetes básicos
+% --------------------
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage[english]{babel}
+
+\usepackage{amsmath, amssymb}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{hyperref}
+\usepackage{cite}
+
+
+
+% Márgenes
+\usepackage{geometry}
+
+
+\renewcommand{\thesubsection}{\arabic{subsection}}
+\setcounter{secnumdepth}{1} % Comentar para que aparezcan los números en los subsections 
+
+\geometry{margin=2.5cm}
+
+% Espaciado
+\usepackage{setspace}
+\onehalfspacing
+
+\title{\textbf{Summary of the paper:}\\
+\large EXPLORATION BY RANDOM NETWORK DISTILLATION}
+
+\author{Ignacio Monardes}
+
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\section*{Reference}
+\noindent
+\textbf{Authors: Yuri Burda, Harrison Edwards, Amos Storkey, Oleg Klimov. OpenAI team.}  \\
+\textbf{Title:} \textit{EXPLORATION BY RANDOM NETWORK DISTILLATION} \\
+\textbf{Conference/Journal:}  \\
+\textbf{Link:} \url{https://arxiv.org/pdf/1810.12894}
+
+
+\section{Motivation}
+\subsection{Current problem} 
+There insufficient exploration in sparse-reward environments with long horizons. The agent learns that every action leads to zero reward.  
+Some algorithms try to use prediction error of the environment dynamics to encourage exploration, but they tend to exploit stochastic transitions.
+
+\subsection{Relevance of the problem}
+Agents cannot solve such tasks because they learn that everything they can do yields zero reward, so there is no incentive 
+to explore new areas and they fail to obtain useful rewards. 
+
+\subsection{Hole in the literature / previous limitations}
+There are methods that introduce novelty-based bonus measured with complex structures to avoid noise and getting stuck on stochastic transitions. 
+These approaches are often difficult to implement and still fail on many Atari games such as Montezuma's Revege or Freeway. 
+
+\section{Idea}
+\subsection{Main Idea}
+The paper defines the reward as the sum of the extrinsic reward $e_t$ (from the environment) and an intrinsic reward measured by the
+novelty of the state $i_t$.
+\[
+r_t = e_t + i_t
+\]
+
+To encourage $i_t$ to be novelty one try to approximate count-based exploration methods. 
+In non-tabular cases it is not straightforward to produce counts. An alternative is to define $i_t$ as the prediction error for a problem related to the agent's
+transitions. Examples includes forward dynamics ($s_{t+1} = f(s_t, a_t)$) and inverse dynamics ($s_t = f(s_{t+1}, a_t)$). 
+
+\subsection{Innovation}
+The proposal uses two networks: a fixed (random) target network $f: O \rightarrow \mathbb{R}^k$ that maps observations to embeddings, 
+and a predictor network $\hat{f}: O \xrightarrow{} \mathbb{R}^k$ that is trained to match the target. The predictor is trained with gradient descent to minimize the mean squared error:
+\[
+\min_\theta \quad \text{MSE} \; \| \hat{f}(x; \theta) - f(x) \|^2
+\]
+
+Sources of prediction error include: 
+\begin{itemize}
+    \item Limited training data (few examples seen by the predictor) - this is desirable as a reward signal.
+    \item Stochasticity in the environment (Noisy TV).
+    \item Model misspecification - missing important information or limited model capabilities. 
+    \item Learning dynamics - the predictor fails to approximates the target function.
+\end{itemize}
+The stochasticity and the model misspecification can be solved by using a deterministic (random but fixed) target network. 
+
+
+\section{Methodology}
+
+\subsection{Modeling} 
+The reward is defined as the sum of the intrinsic reward and the extrinsic reward. We can fit two value heads 
+$V_E$ and $V_I$ separately using their respective returns. The extrinsic reward is stationary and the intrinsic reward is non-stationary.
+
+
+
+
+\subsection{Assumptions}
+The intrinsic reward mus be normalized because it may be on a different scale than the extrinsic reward.
+In the paper the intrinsic reward is divided by a running estimate of its standard deviation.
+Observations are normalized by subtracting the running mean value and dividing by the running standard deviation to each dimension. Then this value is clipped to [-5, 5].
+These running statistics are collected during a set of initial steps before training begins.
+
+
+\subsection{Architecture}
+
+
+\section{Experiments}
+
+\subsection{Baselines}
+The main baseline is PPO without intrinsic exploration. An useful comparison is PPO with some kind of intrinsic reward dervied from forward or backward dyanmics prediction error.
+
+
+\subsection{Environments and datasets}
+First, the authors evaluate RND without extrinsic reward. They define two measures of exploration: 
+mean episodic return and the number of rooms the agent finds. 
+\begin{center}
+    \includegraphics[width=0.5 \linewidth]{pasted-images/ppo_rnd-18-08-04.png}
+\end{center}
+
+Next they combine intrinsic reward with the extrinsic reward, and evaluate both episodic and non-episodic intrinsci reward formulations together with episodic extrinsic rewards.
+intrinsic reward combinaed with episodic extrinsic reward.
+
+\begin{center}
+    \includegraphics[width=\linewidth]{pasted-images/ppo_rnd-18-11-20.png}
+\end{center}
+
+
+\subsection{Settings}
+The main settings is to use:
+\begin{itemize}
+    \item Intrinsic discount $\gamma_I = 0.99$ for non-episodic rewards
+    \item Extrinsic discount $\gamma_E = 0.999$ with episodic rewards.
+    \item An RNN policy.
+    \item 1024 parallel environments. 
+\end{itemize}
+
+\section{Results}
+\begin{center}
+    \includegraphics[width=\linewidth]{pasted-images/ppo_rnd-18-47-50.png}
+\end{center}
+
+\begin{center}
+    \includegraphics[width=\linewidth]{pasted-images/ppo_rnd-18-59-21.png}
+\end{center}
+
+The agent performs better and achieves state of the art on Montezuma's Revenge, Private Eye and Gravitar. It is equally good in Gravitar, Solares and Venture. It is a little worse in Pifall 
+because the extrinsic reward is very sparse. 
+
+An interesting thing of the Dynamics model is that the agent tends to move between two rooms because it is difficult to detect the border and makes a huge difference in the 
+prediction of the next state.  
+
+
+Another interesting qualitative analysis is that when the agent achieves all the known extrinsic rewards the agent starts to jump/move around 
+dangerous objects. This behaviour is related to the fact that dangerous states are difficult to achieve and rarely represented in the experiences. 
+
+\subsection{Good and bad performance in different scenarios}
+The performance is much better 
+
+
+\section{Critical Discussion}
+\subsection{Strength}
+RND simple to implement and achieves state of the art on difficult environments. It is less susceptible to the Noisy TV because it doesn't
+attempt to directly to predict future or past observation. 
+
+
+\subsection{Weakness} 
+RND doesn't solve the first level of Montezuma's Revenge consistently. For unknown reasons it is worse on Pitfall than the others algorithms.
+
+\subsection{Questionable assumptions} 
+Using intrinsic rewards not only increasesexploration, but also incentivizes searching for novel states. 
+The deterministic target network might be to rigid for highly stochastic environments.
+
+\subsection{What it is not clear} 
+\begin{itemize}
+    \item The environment of Montezuma's Revenge is deterministic, I don't know if the others environments used have some stochasticity to see how it performs. 
+    
+    \item Why it is much worse on the Pitfall environment than the other algorithms if all the algorithms suffer from sparse rewards.
+
+    \textit{The environment has extremely long horizons, with mostly penalty rewards. The states are visually similar. Exploration requires very precise sequences.}
+
+    \item I don't know if the mean episodic return is made by the extrinsic reward or the intrinsic reward. I think that it might be the extrinsic reward because that it is what we really try to improve. 
+
+    \textit{The reported mean episodic return refers to extrinsic reward only.}
+
+    \item Why the RNN captures information that the CNN does not captures. 
+
+    \textit{The RNN captures the history, the CNN only uses the current frame.}
+
+    \item Is the RNN applied as the predictor function or as an embedding of the state?
+
+    \textit{The RNN is used in the policy and value networks. It is a memory.}
+
+    \item How are the environments of Gravitar, Pitfall, Private Eye, Solaris and Venture? Why are they difficult? 
+
+    \textit{Gravitar has sparse rewards, precise control, and deadly obstacles.} 
+    
+    \textit{Pitfall has almost zero rewards. Penalizes mistakes and requires memory.}
+    
+    \textit{Solaris is a large map with sparse signals.}
+
+    \textit{Venture is a multiple rooms with enemies and sparse rewards.}
+
+\end{itemize}
+
+
+\section{Conclusions}
+
+\section*{Personal opinion}
+\subsection{¿Is it a good contribution?}
+Absolutely. It achieves state of the art on Montezuma's Revenge and solves the first level some times. This game is very difficult, I had tried it and I couldn't get to many rooms. 
+
+\subsection{¿Would I use it on my investigation?}
+Yes, it seems as a strong baseline against dreamerv3.
+
+
+\section*{Useful link}
+\begin{itemize}
+    \item \textbf{OpenAI implementation:} \url{https://github.com/openai/random-network-distillation/blob/master/run_atari.py}
+    \item \textbf{OpenAI RND web page:} \url{https://openai.com/index/reinforcement-learning-with-prediction-based-rewards/}
+    \item \textbf{Small implementation:} \url{https://github.com/wisnunugroho21/reinforcement_learning_ppo_rnd/blob/master/PPO_RND/pytorch/ppo_rnd_pytorch.py}
+    \item \textbf{CleanRL implementation:} \url{https://github.com/vwxyzjn/cleanrl/blob/master/cleanrl/ppo_rnd_envpool.py}
+\end{itemize}
+
+\bibliographystyle{plain}
+\bibliography{references}
+
+\end{document}
