@@ -14,9 +14,9 @@ matplotlib
 pygame
 portal
 optax
-chex
-elements
-ninjax
+# chex
+# elements
+# ninjax
 einops
 gym
 git+https://github.com/pedropalmav/cookie-env.git 
