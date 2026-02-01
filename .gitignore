@@ -19,3 +19,9 @@ test_observation_raw.png
 *.synctex.gz
 papers_summary/**/*.out
 papers_summary/**/*.log
+
+
+# Modelo:
+*.pt
+*.pth
+*.weights

@@ -17,6 +17,8 @@ from datetime import datetime
 
 # Configuración de dispositivo
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+print("Entrenando en device:", device)
+
 
 # --- 1. Utilidades y Normalización ---
 class RunningMeanStd:
@@ -508,7 +510,7 @@ def save_results(agent, config, ext_history, int_history):
 def main(config):
     # Crear entorno (vectorizado)
     def make_env():
-        env = gym.make("MiniGrid-Empty-5x5-v0", render_mode="rgb_array")
+        env = gym.make("MiniGrid-Empty-8x8-v0", render_mode="rgb_array")
         env = RGBImgObsWrapper(env) # Necesitamos pixeles para la CNN
         env = ImgObsWrapper(env)
         env = gym.wrappers.ResizeObservation(env, (84, 84))
