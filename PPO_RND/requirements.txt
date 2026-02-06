@@ -23,6 +23,8 @@ git+https://github.com/pedropalmav/cookie-env.git
 opencv-python
 pandas
 # --no-deps --ignore-requires-python
+pip install sb3-contrib
+
 
 # pyenv shell 3.12.5
 # source .venvPPO/bin/activate

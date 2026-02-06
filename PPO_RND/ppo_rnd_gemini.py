@@ -8,12 +8,14 @@ import sys
 import matplotlib.pyplot as plt
 from torch.distributions import Categorical
 from gymnasium import spaces
-from minigrid.wrappers import RGBImgObsWrapper, ImgObsWrapper
+from minigrid.wrappers import RGBImgPartialObsWrapper, RGBImgObsWrapper, ImgObsWrapper
 from configs import MODEL_SIZES
 import os
 import json
 import pandas as pd
 from datetime import datetime
+
+
 
 # Configuración de dispositivo
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -194,7 +196,7 @@ class PPO_RND_Agent:
         self.n_opt = config['n_opt']
         self.clip_coef = config["clip_coef"]
         self.num_minibatches = config["num_minibatches"]
-        self.ent_coef = 0.001
+        self.ent_coef = config["ent_coef"]
         
         # Modelos
         self.ac = ActorCritic(self.obs_shape, self.n_actions, config["size_cfg"]).to(device)
@@ -359,7 +361,7 @@ class PPO_RND_Agent:
         minibatch_size = batch_size // self.num_minibatches
         inds = np.arange(batch_size)
         
-        for _ in range(self.n_opt): # 4 épocas de PPO
+        for _ in range(self.n_opt):
             np.random.shuffle(inds)
             # Minibatch loop (simplified)
             # Para GRU real, idealmente procesaríamos secuencias completas, 
@@ -379,7 +381,7 @@ class PPO_RND_Agent:
                 # OJO: Con GRU y shuffling aleatorio, el hidden state no es contiguo.
                 # Para simplificar este script educativo, haremos el forward pass 
                 # tratando cada sample como inicio de secuencia (seq_len=1).
-                # En producción, se usan secuencias de largo L (ej. 8 pasos).
+                # En producción, se usan secuencias de largo L (ej. 8 pasos). 
                 
                 # Forward Pass ActorCritic
                 # mb_obs needs [Minibatch, Seq=1, C, H, W]
@@ -504,27 +506,46 @@ def save_results(agent, config, ext_history, int_history):
     print(f"\n✅ Resultados guardados en: {save_dir}")
     return save_dir
 
+# Crear entorno (vectorizado)
+def make_env():
+    env = gym.make("MiniGrid-Empty-8x8-v0", render_mode="rgb_array")
+    env = RGBImgPartialObsWrapper(env) # Necesitamos pixeles para la CNN
+    env = ImgObsWrapper(env)
+    env = gym.wrappers.ResizeObservation(env, (84, 84))
+    env = gym.wrappers.GrayscaleObservation(env) # (H, W) -> (1, H, W)
+    new_space = spaces.Box(low=0, high=255, shape=(1, 84, 84), dtype=np.uint8)
+
+    env = gym.wrappers.TransformObservation(
+        env, 
+        lambda obs: np.expand_dims(obs, axis=0), 
+        observation_space=new_space # <--- Aquí está el fix
+    )
+    
+    return env
+
+def show_first_frame():
+    # Tu lógica de make_env
+    env = make_env()
+    
+    # Reset y captura
+    obs, info = env.reset()
+    
+    # Mostrar información técnica
+    print(f"Shape original de la obs: {obs.shape}") # Debería ser (84, 84) antes del Transform
+    
+    # Visualización
+    plt.figure(figsize=(6, 6))
+    # Usamos cmap='gray' porque es escala de grises
+    plt.imshow(obs, cmap='gray')
+    plt.title("Vista del Agente (84x84 Grayscale)")
+    plt.axis('off')
+    plt.show()
+    env.close() 
 
 # --- 4. Loop Principal ---
 
 def main(config):
-    # Crear entorno (vectorizado)
-    def make_env():
-        env = gym.make("MiniGrid-Empty-8x8-v0", render_mode="rgb_array")
-        env = RGBImgObsWrapper(env) # Necesitamos pixeles para la CNN
-        env = ImgObsWrapper(env)
-        env = gym.wrappers.ResizeObservation(env, (84, 84))
-        env = gym.wrappers.GrayscaleObservation(env) # (H, W) -> (1, H, W)
-        new_space = spaces.Box(low=0, high=255, shape=(1, 84, 84), dtype=np.uint8)
-
-        env = gym.wrappers.TransformObservation(
-            env, 
-            lambda obs: np.expand_dims(obs, axis=0), 
-            observation_space=new_space # <--- Aquí está el fix
-        )
-        
-        return env
-
+    # show_first_frame()
     envs = gym.vector.SyncVectorEnv([make_env for _ in range(config["n_envs"])])
     
     agent = PPO_RND_Agent(envs, config)

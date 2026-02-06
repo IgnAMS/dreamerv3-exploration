@@ -15,6 +15,33 @@
 \usepackage{cite}
 
 
+% Code
+\usepackage{caption}
+\usepackage{xcolor}
+\usepackage{listings}
+\renewcommand{\lstlistingname}{Algorithm}
+\definecolor{codebg}{rgb}{0.95,0.95,0.95}
+\definecolor{keyword}{rgb}{0.13,0.29,0.53}
+\definecolor{comment}{rgb}{0,0.5,0}
+\definecolor{string}{rgb}{0.58,0,0.82}
+
+\lstdefinestyle{mystyle}{
+    backgroundcolor=\color{codebg},
+    basicstyle=\ttfamily\footnotesize,
+    keywordstyle=\color{keyword}\bfseries,
+    commentstyle=\color{comment}\itshape,
+    stringstyle=\color{string},
+    numbers=left,
+    numberstyle=\tiny,
+    stepnumber=1,
+    frame=single,
+    breaklines=true,
+    tabsize=2,
+    showstringspaces=false
+}
+
+\lstset{style=mystyle}
+
 % Márgenes
 \usepackage{geometry}
 
@@ -141,24 +168,76 @@ we create a lower bound.
     \includegraphics[width=\linewidth]{pasted-images/PPO-16-28-55.png}
 \end{center}
 
-
+\subsection{KL Penalty coeff}
+Another option to the clipped objective is to use a penalty on KL divergence. 
+This performed worse than the clipped version. 
 
 \section{Methodology}
+The methodology is just to adapt the Loss function to the desired loss with clipped or other thing and use stochastci gradient ascent.
+We could use a learned state value $V(s)$ or the finite-horizon estiamters. If our neural network shares parameters between the policy and 
+value function, we must use a loss function that uses both of them. We can add exploration by using entropy bonus. 
+
+We finally have this loss function:
+\[
+L_t^{CLIP+VF+S}(\theta) := \hat{\mathbb{E}}_t\left[
+    L_t^{CLIP}(\theta) + c_1 L_t^{VF}(\theta) + c_2 S[\phi_\theta](s_t)
+\right]
+\]
+where $S$ is an entropy bonus and $L_t^{VF}$ is a squared error loss.
+
+It is very used an estimator of the advantage as:
+\begin{align*}
+    &\hat{A}_t := \delta_t + (\gamma \lambda) \delta_{t+1} + \dots + \dots + (\gamma \lambda)^{T-t+1} \delta_{T-1} \\
+    &\text{where } \quad \delta_t = r_t + \gamma V(s_{t+1}) - V(s_t)
+\end{align*}
+with $T << \text{Length of the episode}$.
+
+
 
 \subsection{Modeling} 
-
+\begin{lstlisting}[language=Python, caption={Pseudo code PPO}]
+for i in range(n_iters):
+    for j in range(n_envs):
+        buffer, next_reward_AC = run_policy(steps=T)
+        advantages = compute_advantages(buffer, next_reward_AC)
+    # M <= NT
+    L = loss(epochs=K, batch_size=M)
+    weights_old = weights
+\end{lstlisting}
 
 \subsection{Assumptions}
-    
 
 \subsection{Architecture}
+The policy is made up of a fully connected MLP with two hidden layers of 64 units, and tanh nonlinearities, outputting the mean of a Gaussian distribution.
+The parameters of the policy and the value function were not shared. There is no entropy bonus. 
 
 
 \section{Experiments}
-\subsection{Environments or datasets}
-    
 
 \subsection{Baselines}
+The baselines are:
+\begin{itemize}
+    \item TRPO.
+    \item Cross-entropy method (CEM).
+    \item Vanilla policy gradient with adaptative stepsize.
+    \item A2C (Advantage Actor Critic, which is synchronous A3C).
+\end{itemize}
+
+\subsection{Environments or datasets}
+They tested the problem with 7 simulated robotics tasks in MuJoCo physics engine. For each task they do 1M timesteps of training. 
+The tasks were runned with 4 different seeds. The score is the average reward of the last 100 episodes. The scores are normalized to the scale [0, 1] and averaged over 21 runs. 
+
+\begin{center}
+    \includegraphics[width=\linewidth]{pasted-images/PPO-11-33-30.png}
+\end{center}
+PPO outperforms almos all the continuos control environments compared to the others algorithms.
+
+PPO works well on humanoid robotics tasks:
+\begin{center}
+    \includegraphics[width=\linewidth]{pasted-images/PPO-11-39-04.png}
+\end{center}
+
+
 
 
 \subsection{Settings}
