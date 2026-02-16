@@ -12,7 +12,7 @@ PROJECT_ROOT="/home/iamonardes/dreamerv3-exploration"
 VENV="${PROJECT_ROOT}/.venvPPO"
 
 # Script a ejecutar (ACTUALIZADO AL NUEVO NOMBRE)
-SCRIPT="${PROJECT_ROOT}/PPO_RND/ppo_rnd_gemini.py"
+SCRIPT="${PROJECT_ROOT}/PPO_RND/PPO_wrapper.py"
 
 ########################################
 # Activación del entorno
