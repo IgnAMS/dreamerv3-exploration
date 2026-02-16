@@ -1,0 +1,320 @@
+\documentclass[11pt,a4paper]{article}
+
+% --------------------
+% Paquetes básicos
+% --------------------
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage[english]{babel}
+
+\usepackage{amsmath, amssymb}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{bbm}
+\usepackage{hyperref}
+\usepackage{cite}
+
+% Code
+\usepackage{xcolor}
+\usepackage{listings}
+\usepackage{caption}
+\renewcommand{\lstlistingname}{Algorithm}
+
+\definecolor{codebg}{rgb}{0.95,0.95,0.95}
+\definecolor{keyword}{rgb}{0.13,0.29,0.53}
+\definecolor{comment}{rgb}{0,0.5,0}
+\definecolor{string}{rgb}{0.58,0,0.82}
+
+\lstdefinestyle{mystyle}{
+    backgroundcolor=\color{codebg},
+    basicstyle=\ttfamily\footnotesize,
+    keywordstyle=\color{keyword}\bfseries,
+    commentstyle=\color{comment}\itshape,
+    stringstyle=\color{string},
+    numbers=left,
+    numberstyle=\tiny,
+    stepnumber=1,
+    frame=single,
+    breaklines=true,
+    tabsize=2,
+    showstringspaces=false
+}
+
+\lstset{style=mystyle}
+
+
+
+% Márgenes
+\usepackage{geometry}
+
+
+\renewcommand{\thesubsection}{\arabic{subsection}}
+\setcounter{secnumdepth}{1} % Comentar para que aparezcan los números en los subsections 
+
+\geometry{margin=2.5cm}
+
+% Espaciado
+\usepackage{setspace}
+\onehalfspacing
+
+\title{\textbf{Summary of the paper: Hindsight Experience Replay}\\
+\large }
+
+\author{Ignacio Monardes}
+
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\section*{Reference}
+\noindent
+\textbf{Authors:} Marcin Andrychowicz, Filip Wolski, Alex Ray, Jonas Schneider, Rachel Fong,
+Peter Welinder, Bob McGrew, Josh Tobin, Pieter Abbeel†, Wojciech Zaremba \\
+\textbf{Title:} \textit{Hindsight Experience Replay} \\
+\textbf{Conference/Journal:} 30$^\circ$ NeurIPS  \\
+\textbf{Link:} \url{https://arxiv.org/pdf/1707.01495} \\
+\textbf{Team:} OpenAI
+
+\section{Motivation}
+\subsection{Current problem} 
+The main objectives in tasks such as robotics is to move blocks because it is very difficult to achieve the goals, 
+generating sparse rewards. These trajectories may be seen as useless because all of them lead to a 0 reward
+and doesn't help to train the model at all. At the time of this paper, the solution was to create handmade 
+rewards with a curriculum to lead the agent to achieve new goals, but it used complicated formulas and it is 
+not generizable to many environments. 
+
+\subsection{Relevance of the problem}
+The problem is relevant because we could use these sparse trajectories to learn how to get to some destinations, 
+it is not the final goal, but it helps the model understand how to interact and to achieve things with something 
+that could be generalized.
+
+
+\subsection{Hole in the literature / previous limitations}
+The hole in the literature is the lack of a generalized algorithm that uses the sparse trajectories to learn useful 
+things about the behaviour. This could produce a more efficient learning.
+
+\section{Idea}
+\subsection{Main Idea}
+Humans can learn from undesired outcomes by doing it, and this helps our training to achieve what 
+we really want to do. This makes the use of trajectories more sample-efficient, and helps with sparse rewards, because 
+we will learn how to achieve many final states. To do this we have to use an experience buffer because we are going to ``change'' 
+the states and the rewards of the trajectories and learn by this. 
+
+\subsection{Context}
+With DQN we have a replay buffer which we use to train our neural network that approximates $Q$-values.
+We train DQN by using this loss:
+\[
+\mathcal{L} = \mathbb{E}\left[(Q(s_t, a_t) - y_t)^2\right], \quad y_t = r_t + \gamma \max_{a'} Q(s_{t+1}, a')
+\]
+with many trajectories from the replay buffer in the form $(s_t, a_t, r_t, s_{t+1})$.
+
+DDPG is similar to DQN, but for continuous actions. Here, our behavior policy is: $\pi_b(s) = \pi(s) + N(0, 1)$.
+We have two neural networks:
+an \textit{actor} which is a target policy $\pi$ and a \textit{critic} $Q^\pi$ that says how good are the actions of the actor.
+The critic is trained like DQN, but with $y_t = r_t + \gamma Q^\pi(s_{t+1}, \pi(s_{t+1}))$.
+
+The actor is trained with this loss:
+\[
+\mathcal{L}_{a} = - \mathbb{E}_s\left[
+    Q^\pi(s_{t+1}, \pi(s_{t+1}))
+\right]
+\]
+
+We could also use many goals to achieve it, so for that we can just add the goal as part of the state: $\hat{s}_t := (s_t, g)$.
+
+
+\subsection{Innovation}
+The innovation consists of learning how to recreate many outcomes by learning from the trajectories of our replay buffer.
+We can make this by just getting the final state $g := s_T$ and adding the states $\hat{s}_t := (s_t, g)$ in the buffer 
+for the whole trajectory.
+
+It works as an impicit \textit{curriculum}.
+
+\section{Methodology}
+More formally, we have some requisites:
+\begin{itemize}
+    \item For every goal $g \in \mathcal{G}$ we have to know if the current state matches or not the goal $g$. In other words:
+    \[
+    \forall g \in \mathcal{G} \; \exists f_g: \mathcal{S} \to \{0, 1\}.
+    \]
+
+    \item For every state $s \in \mathcal{S}$ we can easily find a goal $g$ which is satisfied by this state. In mathematical words: exists 
+    $m : \mathcal{S} \to \mathcal{G}$ such that 
+    \[
+    \forall s \in \mathcal{S} \; f_{m(s)}(s) = 1.
+    \]
+    This could be done if we just use $\mathcal{S} = \mathcal{G}$ and $f_g(s) = \mathbbm{1}_{[s = g]}$.
+\end{itemize}
+
+
+\subsection{Modeling} 
+\begin{lstlisting}[language=Python, caption={HER pseudocode}]
+agent = make_offline_agent()
+replay = make_replay()
+env = make_env()
+goal_sampler = make_goal_sampler()
+
+for episode in range(M):
+    state = env.reset()
+    g = goal_sampler.single_sample()
+    states = [state]
+    actions, rewards = [], []
+    for t in range(T):
+        a_t = agent.behaviour_policy(s_t, g)
+        state, reward = env.step(a_t)
+        states.append(state)
+        actions.append(a_t)
+        rewards.append(reward)
+
+    for t in range(T):
+        r_t = r(states[t], actions[t], g)
+        replay.add([(states[t], g), actions[t], r_t, (states[t+1], g)])
+        G = goal_sampler.multiple_sample()
+        for g_prime in G:
+            r_prime = r(states[t], actions[t], g_prime)
+            replay.add(
+                [(states[t], g_prime), actions[t], r_prime, (states[t+1], g_prime)]
+            )
+    
+    for t in range(N):
+        minibatch = replay.minibatch()
+        agent.update(minibatch)
+\end{lstlisting}
+
+
+\subsection{Architecture}
+It was used with simple MLPs for the policies with ReLU activations. Training is performed using DDPG with ADAM optimizer.
+
+\section{Experiments}
+\subsection{Environments and datasets}
+It was trained on a 7-DOF robotic arms in a simulated environment.
+
+There are three different classes of tasks:
+\begin{itemize}
+    \item Pushing: push a block in front of the robot to a target location. The fingers are locked. 
+    The learned behaviour is a mixture of pushing and rolling.
+    \item Sliding: A puck (disk) is placed on a slippery table and the robot must hit the puck to slide to the target.
+    \item Pick-and-place: Fingers are not locked in. The arm must pick a box and move it to a target in the air.
+\end{itemize}    
+
+\begin{center}
+    \includegraphics[width=\linewidth]{pasted-images/HER-16-41-16.png}
+\end{center}
+
+There are two approaches for the target. One could just use the reward just as the indicatrix of the final state or 
+maybe a shaped reward as the measure of how near am I to the final state. One example is:
+\[
+r(s,g,a) := \lambda |g - s_{obj}|^p - |g - s_{obj}|^p
+\]
+with $\lambda \in \{0, 1\}, \, p \in \{1, 2\}$ are hyperparameters.
+
+The result is that geometrical rewards are worse than the binary final state because they tend to stimulate to be near
+but not to complete the mission.
+
+We could also try different strategies for adding more experiences to the buffer. The default strategy will be 
+\textit{final} which consists in only adding the final state.
+\[
+multiple\_sample(s_0, s_1, \dots, s_T) = \{m(s_T)\}.
+\]
+
+Other possible options are the following strategies:
+\begin{itemize}
+    \item \textit{future}: replay with $k$ random states from the current episode but with only states that will be in the future.
+    \[
+    multiple\_sample(s_0, s_1, \dots, s_t) = \{m(s_{t'_1}), m(s_{t'_2}), \dots, m(s_{t'_k})\}, \quad t'_i > t \; \forall i
+    \]
+    \item \textit{episode}: replay with $k$ random states from the current episode.
+    \[
+    multiple\_sample(s_0, s_1, \dots, s_t) = \{m(s_{t'_1}), m(s_{t'_2}), \dots, m(s_{t'_k})\}
+    \]
+    \item \textit{random}: replay with $k$ random states encountered so far in the whole training procedure.
+\end{itemize}
+
+
+\subsection{Assumptions}
+
+The states are the physical data such as: angles, velocities of the robot joints and positions, velocities and rotations of 
+the objects.
+
+The goals are every position in a 3D plane. The function that decides if the state accomplished the goal is 
+$f_g(s) = \mathbbm{1}_{\|g-s_{obj}\| \leq \varepsilon}$.
+The mapping is just $m(s) = s_{obj}$.
+
+The reward is just $r(s, a, g) := - \mathbbm{1}_{f_g(s') = 0}$ with $s'$ the next state of the environment.
+
+For observations we could use just the position of the gripper the relative position of the object and target to the 
+gripper and the distance between the fingers.
+Q also receives the linear velocity of the gripper and fingers and relative velocities of the object.
+
+The gripper rotation is fixed to not be used. 
+Three dimensions specify the desired relative gripper position at the next timestep (MuJoCo constraints). 
+The last dimension specifies the desired distance between two fingers.
+
+
+
+\subsection{Baselines}
+The baselines are: DDPG, DDPG + count based exploration such as:
+
+
+\section{Results}
+HER outperforms DDPG variants that couldn't solve the tasks.
+\begin{center}
+    \includegraphics[width=\linewidth]{pasted-images/HER-17-05-01.png}
+\end{center}
+
+HER could solve problems even if the real task was only one and not multiple.
+\begin{center}
+    \includegraphics[width=\linewidth]{pasted-images/HER-17-23-57.png}
+\end{center}
+
+HER with \textit{future} and \textit{final} strategies tends to achieve better performance than \textit{random},
+\textit{episode} and \textit{no HER}.
+\begin{center}
+    \includegraphics[width=\linewidth]{pasted-images/HER-11-10-14.png}
+\end{center}
+
+
+\subsection{Deployment in real robot}
+With a trained \textit{future} strategy and without finetuning the robot achieved 2/5 goals. The position of the box 
+was get from a trained CNN using a camera images. After retraining the policy with gaussian noise to the observations 
+the success increased to 5/5.
+
+\subsection{Good and bad performance in different scenarios}
+It seems that the \textit{future} strategy with $k=4$ performs better than the other approaches. 
+For some reason the \textit{final} strategy is not better than the future but it is used as default in the paper.
+
+The algorithm works to learn intermediate goals to achieve a higher goal as an implicit curriculum. 
+
+\section{Critical Discussion}
+\subsection{Strength}
+It works because it encourages learning acrros multiple goals in a sparse environment.
+
+It is demonstrated with the figures that this methodology helps to achieve the final goal.
+
+\subsection{Weakness} 
+I don't know if it could encourage to go to undesirable states for other goals that are undesired.
+
+\subsection{Questionable assumptions} 
+
+
+\subsection{What it is not clear} 
+It is mentioned that HER with geometrical rewards was worse than binary goal but there is no 
+figure comparing both of these approaches.
+
+\section{Conclusions}
+
+\section*{Personal opinion}
+\subsection{Is it a good contribution?}
+Absolutely. It is easy to implement and helps a lot to achieve not only one goal but multiple at the same time.
+The algorithm also works when we have just one final goal.
+
+\subsection{Would I use it on my investigation?}
+Yes. I could combine it with dreamer.
+
+\bibliographystyle{plain}
+\bibliography{references}
+
+\end{document}
