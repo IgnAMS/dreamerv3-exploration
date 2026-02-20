@@ -34,6 +34,7 @@ class RNDCallback(BaseCallback):
         self.lr = lr
         self.env = env
 
+        self.cum_ext = np.zeros(4, dtype=np.float64)
         self.is_initialized = False
         self._setup_rnd()
 
@@ -62,6 +63,7 @@ class RNDCallback(BaseCallback):
         self.optimizer = optim.Adam(self.predictor.parameters(), lr=self.lr)
         self.is_initialized = True
 
+
     def _on_training_start(self) -> None:
         self._setup_rnd()
         self.target.to(self.model.device)
@@ -79,10 +81,15 @@ class RNDCallback(BaseCallback):
         # Error cuadrático medio por cada ambiente en paralelo
         intrinsic_reward = torch.pow(target_out - predict_out, 2).mean(dim=1).detach().cpu().numpy()
         
+        # Testing
+        extrinsic = np.array(self.locals["rewards"], dtype=np.float64)
+        self.cum_ext += extrinsic
+        
         mean_intrinsic_reward = np.mean(intrinsic_reward)
         self.logger.record("train/intrinsic_reward_mean", mean_intrinsic_reward)
         self.logger.record("train/intrinsic_reward_var", self.intrinsic_reward_std.var)
         self.logger.record("rollout/raw_extrinsic_reward", np.mean(self.locals["rewards"]))
+        self.logger.record("rollout/raw_extrinsic_step_mean", np.mean(extrinsic))
         
         # 3. Normalizar la recompensa intrínseca usando RunningMeanStd
         self.intrinsic_reward_std.update(intrinsic_reward)
@@ -93,6 +100,17 @@ class RNDCallback(BaseCallback):
         rewards += intrinsic_reward * self.weight_intrinsic
         self.locals["rewards"] = rewards
 
+        # detectar episodios que terminaron y loggear la suma extrínseca por episodio
+        infos = self.locals.get("infos", [])
+        for i, info in enumerate(infos):
+            if info is None:
+                continue
+            ep = info.get("episode")  # Monitor añade esto cuando termina un episodio
+            if ep is not None:
+                # ep['r'] normalmente es la suma de rewards que Monitor guardó
+                self.logger.record("rollout/extrinsic_episode_return", self.cum_ext[i])
+                # reset del acumulador para ese env
+                self.cum_ext[i] = 0.0
 
         # 5. Actualizar la red Predictor
         loss = torch.pow(target_out.detach() - predict_out, 2).mean()
