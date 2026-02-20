@@ -7,6 +7,8 @@ from stable_baselines3.common.vec_env import DummyVecEnv
 from stable_baselines3.common.monitor import Monitor
 import matplotlib.pyplot as plt
 import os
+import argparse
+
 
 log_dir = "./tb_logs/"
 os.makedirs(log_dir, exist_ok=True)
@@ -204,8 +206,8 @@ def pre_train_RND(rnd_callback, env, device, pre_train_steps=20000):
     
 
 
-def train():
-    num_envs = 4
+def train(args):
+    num_envs = args.envs
     env = DummyVecEnv([make_env() for _ in range(num_envs)])  
     # --- Visualización de la primera imagen ---
     show_env()
@@ -213,7 +215,6 @@ def train():
 
     # 3. Configurar RecurrentPPO
     # Nota: SB3 reordena automáticamente los canales de (H,W,C) a (C,H,W) internamente
-    rnd_callback = RNDCallback(env, weight_intrinsic=0.005)
     """
     model = RecurrentPPO(
         "CnnLstmPolicy", 
@@ -234,16 +235,36 @@ def train():
         device="auto",
         tensorboard_log=log_dir,
     )
-
-    print("Iniciando entrenamiento con memoria...")
-    pre_train_RND(rnd_callback, env, model.device)
-    model.learn(
-        total_timesteps=1000000,
-        callback=rnd_callback,
-    )
-    
-    model.save(os.path.join(log_dir, "ppo_minigrid_partial_rgb"))
+    if args.no_rnd:
+        print("\n===== ENTRENANDO SIN RND =====")
+        model.learn(
+            total_timesteps=args.steps,
+        )
+    else:
+        rnd_callback = RNDCallback(env, weight_intrinsic=args.intrinsic_coef)
+        print("\n===== ENTRENANDO CON RND =====")
+        print("Pre-training predictor...")
+        pre_train_RND(rnd_callback, env, model.device)
+        model.learn(
+            total_timesteps=args.steps,
+            callback=rnd_callback,
+        )
+        
+    name = "ppo" if args.no_rnd else "ppo_rnd"
+    model.save(os.path.join(log_dir, name))
     print("Modelo guardado con éxito.")
 
 if __name__ == "__main__":
-    train()
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument("--no-rnd", action="store_true",
+                        help="Activar RND intrinsic reward")
+    parser.add_argument("--intrinsic-coef", type=float, default=0.005,
+                        help="Peso del reward intrinseco")
+    parser.add_argument("--envs", type=int, default=4,
+                        help="Numero de ambientes paralelos")
+    parser.add_argument("--steps", type=int, default=1_000_000,
+                        help="Total timesteps")
+    args = parser.parse_args()
+    print(args)
+    # train(args)
