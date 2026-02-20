@@ -194,6 +194,14 @@ class RNDTrainCallback(BaseCallback):
         """
         Train predictor using the latest new_obs (batch) from the rollouts.
         """
+        # Escribir intrinsic y extrinsic reward
+        infos = self.locals["infos"]
+        intr_rewards = [info["intrinsic_reward"] for info in infos]
+        avg_intr = np.mean(intr_rewards)
+        self.logger.record("rollout/intrinsic_reward_avg", avg_intr)
+        raw_intr = [info["raw_intrinsic"] for info in infos]
+        self.logger.record("rollout/intrinsic_reward_raw", np.mean(raw_intr))
+        
         obs = self.locals["new_obs"]
         self.obs_buffer.append(obs)
         
@@ -212,8 +220,7 @@ class RNDTrainCallback(BaseCallback):
             # Limpiamos el buffer para el siguiente lote
             self.obs_buffer = []
         
-        # obs_t = preprocess_obs(obs, self.device)  # (N,C,H,W)
-        # _ = self.rnd.train_step(obs_t)
+        
         return True
             
 
