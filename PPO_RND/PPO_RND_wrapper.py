@@ -1,26 +1,11 @@
-import os
-import argparse
 import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import matplotlib.pyplot as plt
 
-import gymnasium as gym
-from minigrid.wrappers import RGBImgPartialObsWrapper, ImgObsWrapper
-from stable_baselines3 import PPO
 from stable_baselines3.common.vec_env import DummyVecEnv, VecEnvWrapper
-from stable_baselines3.common.monitor import Monitor
 from stable_baselines3.common.callbacks import BaseCallback
 from stable_baselines3.common.running_mean_std import RunningMeanStd
-
-# tu entorno cookie
-import minigrid
-from cookie_env.envs import CornerEnv
-
-log_dir = "./tb_logs/"
-os.makedirs(log_dir, exist_ok=True)
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
 def conv_output_size(model_conv, c, h, w, device):
@@ -223,38 +208,6 @@ class RNDTrainCallback(BaseCallback):
         
         return True
             
-
-def make_env():
-    # Esta función crea un solo ambiente
-    def _init():
-        env = gym.make("CornerEnv-v0", render_mode="rgb_array", size=55)
-        env = RGBImgPartialObsWrapper(env, tile_size=32)
-        env = ImgObsWrapper(env)
-        env = Monitor(env)
-        return env
-    return _init
-
-def show_env():
-    env = DummyVecEnv([make_env()])
-    obs = env.reset()[0]
-    print(f"Forma de la observación (H, W, C): {obs.shape}")
-
-    # 1. Creamos el entorno con tus wrappers
-    init_fn = make_env()
-    env = init_fn()
-    obs, info = env.reset()
-    global_view = env.unwrapped.render()
-    fig, ax = plt.subplots(1, 2, figsize=(10, 5))
-    ax[0].imshow(obs)
-    ax[0].set_title(f"Obs Agente (CNN Input)\nShape: {obs.shape}")
-    ax[0].axis('off')
-    ax[1].imshow(global_view)
-    ax[1].set_title("Vista Global del Entorno")
-    ax[1].axis('off')
-    plt.tight_layout()
-    plt.show()
-    env.close()
-
 def pretrain_RND(rnd_model: RNDModel, base_env: DummyVecEnv, device, pre_train_steps=20000):
     print("Iniciando pre-entrenamiento RND (acciones aleatorias)...")
     obs = base_env.reset()
@@ -268,84 +221,3 @@ def pretrain_RND(rnd_model: RNDModel, base_env: DummyVecEnv, device, pre_train_s
         if step % 100 == 0:
             print(f"Pre-train RND: {step}/{pre_train_steps}")
     print("Pre-train RND finalizado.")
-
-
-def train(args):
-    num_envs = args.envs
-    base_env = DummyVecEnv([make_env() for _ in range(num_envs)])  
-    
-    # --- Visualización de la primera imagen ---
-    show_env()
-    
-    if args.no_rnd:
-        print("\n===== ENTRENANDO SIN RND =====")        
-        rnd_model = None
-        callback = None
-        env = base_env
-    else:
-        print("\n===== ENTRENANDO CON RND =====")
-        # create RND model with obs shape (C,H,W)
-        # base_env.observation_space.shape -> (H, W, C)
-        h, w, c = base_env.observation_space.shape
-        obs_shape = (c, h, w)
-        rnd_model = RNDModel(obs_shape, feature_dim=512, device=device).to(device)
-
-        # pre-train predictor on random policy using base_env (without wrapper)
-        pretrain_RND(rnd_model, base_env, device, pre_train_steps=args.pretrain)
-
-        # wrap the env AFTER pretraining so we add intrinsic reward to PPO
-        env = RNDVecEnv(base_env, rnd_model, device, intrinsic_coef=args.intrinsic_coef, gamma=args.gamma)
-
-        # create callback to keep training predictor during PPO training
-        callback = RNDTrainCallback(rnd_model, device)
-
-
-    """
-    model = RecurrentPPO(
-        "CnnLstmPolicy", 
-        env, 
-        verbose=1, 
-        learning_rate=0.0003,
-        n_steps=128,
-        device="auto",
-        tensorboard_log=log_dir,
-    )
-    """
-    model = PPO(
-        "CnnPolicy",
-        env,
-        verbose=1,
-        learning_rate=3e-4,
-        n_steps=128,
-        device="auto",
-        tensorboard_log=log_dir,
-    )
-            
-    model.learn(
-        total_timesteps=args.steps,
-        callback=callback,
-    )
-        
-    name = "ppo" if args.no_rnd else "ppo_rnd"
-    model.save(os.path.join(log_dir, name))
-    print("Modelo guardado con éxito.")
-
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-
-    parser.add_argument("--no-rnd", action="store_true",
-                        help="Desactivar RND intrinsic reward")
-    parser.add_argument("--intrinsic-coef", type=float, default=0.005,
-                        help="Peso del reward intrinseco")
-    parser.add_argument("--envs", type=int, default=4,
-                        help="Numero de ambientes paralelos")
-    parser.add_argument("--steps", type=int, default=1_000_000,
-                        help="Total timesteps")
-
-    parser.add_argument("--pretrain", type=int, default=2000,
-                        help="Pasos de pre-entrenamiento RND (acciones aleatorias)")
-    parser.add_argument("--gamma", type=float, default=0.99,
-                        help="Gamma para discounted return de intrinsic RMS")
-    
-    args = parser.parse_args()
-    train(args)
