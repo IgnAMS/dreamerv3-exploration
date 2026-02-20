@@ -57,7 +57,7 @@ def preprocess_obs(obs, device):
 class RNDModel(nn.Module):
     def __init__(self, obs_shape, feature_dim=512, device="cpu"):
         super().__init__()
-
+        print("RND device:", device)
         c,h,w = obs_shape
         self.device = device
 
@@ -67,12 +67,12 @@ class RNDModel(nn.Module):
             nn.Conv2d(32, 64, 3, stride=2, padding=1),
             nn.ReLU(),
             nn.Flatten()
-        )
+        ).to(device)
         flat_size = conv_output_size(self._target_conv, c, h, w, device)
 
         self._target_fc = nn.Sequential(
             nn.Linear(flat_size, feature_dim)
-        )
+        ).to(device)
         
         self._predictor_conv = nn.Sequential(
             nn.Conv2d(c, 32, 3, stride=2, padding=1),
@@ -80,13 +80,13 @@ class RNDModel(nn.Module):
             nn.Conv2d(32, 64, 3, stride=2, padding=1),
             nn.ReLU(),
             nn.Flatten()
-        )
+        ).to(device)
         self._predictor_fc = nn.Sequential(
             nn.Linear(flat_size, feature_dim)
-        )
+        ).to(device)
 
-        self.target = nn.Sequential(self._target_conv, self._target_fc).to(device)
-        self.predictor = nn.Sequential(self._predictor_conv, self._predictor_fc).to(device)
+        self.target = nn.Sequential(self._target_conv, self._target_fc)
+        self.predictor = nn.Sequential(self._predictor_conv, self._predictor_fc)
 
         for p in self.target.parameters():
             p.requires_grad = False
