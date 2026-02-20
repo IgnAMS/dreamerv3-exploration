@@ -1,6 +1,7 @@
 import gymnasium as gym
 from minigrid.wrappers import RGBImgPartialObsWrapper, ImgObsWrapper
 from sb3_contrib import RecurrentPPO
+from stable_baselines3 import PPO
 from stable_baselines3.common.vec_env import SubprocVecEnv
 from stable_baselines3.common.vec_env import DummyVecEnv
 from stable_baselines3.common.monitor import Monitor
@@ -195,12 +196,23 @@ def train():
     # 3. Configurar RecurrentPPO
     # Nota: SB3 reordena automáticamente los canales de (H,W,C) a (C,H,W) internamente
     rnd_callback = RNDCallback(env, weight_intrinsic=0.005)
+    """
     model = RecurrentPPO(
         "CnnLstmPolicy", 
         env, 
         verbose=1, 
         learning_rate=0.0003,
         n_steps=128,      # Tamaño de la ventana de experiencia
+        device="auto",
+        tensorboard_log=log_dir,
+    )
+    """
+    model = PPO(
+        "CnnPolicy",
+        env,
+        verbose=1,
+        learning_rate=3e-4,
+        n_steps=128,
         device="auto",
         tensorboard_log=log_dir,
     )
