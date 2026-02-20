@@ -30,9 +30,32 @@ def conv_output_size(model_conv, c, h, w, device):
         out = model_conv(inp)
         return int(np.prod(out.shape[1:]))
 
+def preprocess_obs(obs, device):
+    """
+    Acepta obs en:
+      - numpy array (N, H, W, C) uint8 o float
+      - torch tensor (N, H, W, C) o (N, C, H, W)
+    Devuelve tensor torch (N, C, H, W), float32 en [0,1], en device.
+    """
+    if isinstance(obs, np.ndarray):
+        obs_t = torch.as_tensor(obs, dtype=torch.float32, device=device)
+    elif isinstance(obs, torch.Tensor):
+        obs_t = obs.to(device=device, dtype=torch.float32)
+    else:
+        raise TypeError("obs must be numpy array or torch tensor")
+
+    if obs_t.ndim != 4:
+        raise ValueError(f"Expected obs with 4 dims (N,H,W,C) or (N,C,H,W), got {obs_t.shape}")
+
+    # Caso común: (N, H, W, C)
+    if obs_t.shape[-1] in (1, 3):  # HWC
+        obs_t = obs_t.permute(0, 3, 1, 2)  # -> (N, C, H, W)
+    obs_t = obs_t / 255.0
+
+    return obs_t  # torch.Tensor (N, C, H, W)
 
 class RNDModel(nn.Module):
-    def __init__(self, obs_shape, feature_dim=512):
+    def __init__(self, obs_shape, feature_dim=512, device="cpu"):
         super().__init__()
 
         c,h,w = obs_shape
@@ -123,34 +146,25 @@ class RNDVecEnv(VecEnvWrapper):
         self.ret_rms = RunningMeanStd(shape=())
         self.running_returns = np.zeros(self.num_envs, dtype=np.float64)
 
-    def _normalize_obs(self, obs_np):
-        # obs_np expected HWC per env -> convert to tensor CHW and scale to [0,1]
-        obs_t = torch.tensor(obs_np, dtype=torch.float32, device=self.device)  # (N, H, W, C)
-        if obs_t.ndim == 4:
-            # to (N, C, H, W)
-            obs_t = obs_t.permute(0, 3, 1, 2)
-        obs_t = obs_t / 255.0
-        return obs_t
-
     def step_wait(self):
+        # 1. Obtenemos las variables originales (obs es NumPy array)
         obs, rewards, dones, infos = self.venv.step_wait()  # obs: (N, H, W, C)
-        # compute intrinsic reward
-        obs_t = self._normalize_obs(obs)
+        
+        # 2. Preprocesamos solo para calcular RND
+        obs_t = preprocess_obs(obs, self.device)
         with torch.no_grad():
             intrinsic_t = self.rnd.compute_intrinsic_reward(obs_t)  # torch tensor (N,)
         intrinsic = intrinsic_t.cpu().numpy().astype(np.float64)
 
-        # update discounted running returns for normalization
+        # 3. Normalizamos y combinamos la recompensa
         self.running_returns = self.running_returns * self.gamma + intrinsic
-        # update RMS
         self.ret_rms.update(self.running_returns)
-        # normalize intrinsic by RMS of discounted returns
         norm_intrinsic = intrinsic / (np.sqrt(self.ret_rms.var + self.eps))
 
         # add to external rewards
         rewards = rewards.astype(np.float64) + self.beta * norm_intrinsic
 
-        # logging to infos
+        # 4. Registramos los logs y reseteamos retornos si hay "done"
         for i in range(len(infos)):
             infos[i]["intrinsic_reward"] = float(norm_intrinsic[i])
             infos[i]["raw_intrinsic"] = float(intrinsic[i])
@@ -162,26 +176,44 @@ class RNDVecEnv(VecEnvWrapper):
 
         return obs, rewards, dones, infos
 
+    def reset(self):
+        obs = self.venv.reset()
+        self.last_obs = obs
+        return obs
+
+
 class RNDTrainCallback(BaseCallback):
-    def __init__(self, rnd_model: RNDModel, device):
+    def __init__(self, rnd_model: RNDModel, device, batch_size=128):
         super().__init__()
         self.rnd = rnd_model
         self.device = device
+        self.batch_size = batch_size
+        self.obs_buffer = []
 
     def _on_step(self) -> bool:
         """
         Train predictor using the latest new_obs (batch) from the rollouts.
         """
-        new_obs = self.locals.get("new_obs")
-        if new_obs is None:
-            return True
-
-        # new_obs shape (N, H, W, C)
-        obs_t = torch.tensor(new_obs, dtype=torch.float32, device=self.device)
-        if obs_t.ndim == 4:
-            obs_t = obs_t.permute(0, 3, 1, 2)
-        obs_t = obs_t / 255.0
-        _ = self.rnd.train_step(obs_t)
+        obs = self.locals["new_obs"]
+        self.obs_buffer.append(obs)
+        
+        num_envs = obs.shape[0]
+        total_samples = len(self.obs_buffer) * num_envs
+        if total_samples >= self.batch_size:
+            # Concatenamos todo en un solo array de NumPy (B, H, W, C)
+            batch_obs = np.concatenate(self.obs_buffer, axis=0)
+            
+            # Preprocesamos al tensor (B, C, H, W) en la GPU/CPU
+            obs_t = preprocess_obs(batch_obs, self.device)
+            
+            # Entrenamos la red predictora
+            _ = self.rnd.train_step(obs_t)
+            
+            # Limpiamos el buffer para el siguiente lote
+            self.obs_buffer = []
+        
+        # obs_t = preprocess_obs(obs, self.device)  # (N,C,H,W)
+        # _ = self.rnd.train_step(obs_t)
         return True
             
 
@@ -199,13 +231,6 @@ def show_env():
     env = DummyVecEnv([make_env()])
     obs = env.reset()[0]
     print(f"Forma de la observación (H, W, C): {obs.shape}")
-    
-    plt.figure(figsize=(5,5))
-    plt.imshow(obs)
-    plt.title("Vista Parcial RGB del Agente")
-    plt.axis('off')
-    plt.show()
-    env.close()
 
     # 1. Creamos el entorno con tus wrappers
     init_fn = make_env()
@@ -223,21 +248,17 @@ def show_env():
     plt.show()
     env.close()
 
-def pre_train_RND(rnd_model: RNDModel, base_env: DummyVecEnv, device, pre_train_steps=20000):
+def pretrain_RND(rnd_model: RNDModel, base_env: DummyVecEnv, device, pre_train_steps=20000):
     print("Iniciando pre-entrenamiento RND (acciones aleatorias)...")
-    # reset running env
     obs = base_env.reset()
     for step in range(pre_train_steps):
-        # sample random actions per env
         actions = np.array([base_env.action_space.sample() for _ in range(base_env.num_envs)])
         new_obs, rewards, dones, infos = base_env.step(actions)
-        # prepare obs tensor for train
-        obs_t = torch.tensor(new_obs, dtype=torch.float32, device=device)
-        if obs_t.ndim == 4:
-            obs_t = obs_t.permute(0, 3, 1, 2)
-        obs_t = obs_t / 255.0
+        
+        obs_t = preprocess_obs(new_obs, device)
         rnd_model.train_step(obs_t)
-        if step % 1000 == 0:
+        
+        if step % 100 == 0:
             print(f"Pre-train RND: {step}/{pre_train_steps}")
     print("Pre-train RND finalizado.")
 
@@ -263,7 +284,7 @@ def train(args):
         rnd_model = RNDModel(obs_shape, feature_dim=512, device=device).to(device)
 
         # pre-train predictor on random policy using base_env (without wrapper)
-        pre_train_RND(rnd_model, base_env, device, pre_train_steps=args.pretrain)
+        pretrain_RND(rnd_model, base_env, device, pre_train_steps=args.pretrain)
 
         # wrap the env AFTER pretraining so we add intrinsic reward to PPO
         env = RNDVecEnv(base_env, rnd_model, device, intrinsic_coef=args.intrinsic_coef, gamma=args.gamma)
@@ -278,7 +299,7 @@ def train(args):
         env, 
         verbose=1, 
         learning_rate=0.0003,
-        n_steps=128,      # Tamaño de la ventana de experiencia
+        n_steps=128,
         device="auto",
         tensorboard_log=log_dir,
     )
@@ -292,8 +313,7 @@ def train(args):
         device="auto",
         tensorboard_log=log_dir,
     )
-        
-        
+            
     model.learn(
         total_timesteps=args.steps,
         callback=callback,
@@ -307,12 +327,18 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
 
     parser.add_argument("--no-rnd", action="store_true",
-                        help="Activar RND intrinsic reward")
+                        help="Desactivar RND intrinsic reward")
     parser.add_argument("--intrinsic-coef", type=float, default=0.005,
                         help="Peso del reward intrinseco")
     parser.add_argument("--envs", type=int, default=4,
                         help="Numero de ambientes paralelos")
     parser.add_argument("--steps", type=int, default=1_000_000,
                         help="Total timesteps")
+
+    parser.add_argument("--pretrain", type=int, default=2000,
+                        help="Pasos de pre-entrenamiento RND (acciones aleatorias)")
+    parser.add_argument("--gamma", type=float, default=0.99,
+                        help="Gamma para discounted return de intrinsic RMS")
+    
     args = parser.parse_args()
     train(args)
