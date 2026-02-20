@@ -266,5 +266,4 @@ if __name__ == "__main__":
     parser.add_argument("--steps", type=int, default=1_000_000,
                         help="Total timesteps")
     args = parser.parse_args()
-    print(args)
-    # train(args)
+    train(args)
