@@ -42,25 +42,22 @@ def set_seed(seed):
     random.seed(seed)
 
 
-def make_env():
+def make_env(args):
     # Esta función crea un solo ambiente
     def _init():
-        env = gym.make("CornerEnv-v0", render_mode="rgb_array", size=55)
+        env = gym.make(args.env, render_mode="rgb_array", size=args.env_size)
         env = RGBImgPartialObsWrapper(env, tile_size=32)
         env = ImgObsWrapper(env)
         env = Monitor(env)
         return env
     return _init
 
-def show_env():
-    env = DummyVecEnv([make_env()])
-    obs = env.reset()[0]
-    print(f"Forma de la observación (H, W, C): {obs.shape}")
-
+def show_env(args):
     # 1. Creamos el entorno con tus wrappers
-    init_fn = make_env()
+    init_fn = make_env(args)
     env = init_fn()
     obs, info = env.reset()
+    print(f"Forma de la observación (H, W, C): {obs.shape}")
     global_view = env.unwrapped.render()
     fig, ax = plt.subplots(1, 2, figsize=(10, 5))
     ax[0].imshow(obs)
@@ -77,14 +74,16 @@ def show_env():
 def train(args, current_seed):
     set_seed(current_seed)
     num_envs = args.envs
-    base_env = DummyVecEnv([make_env() for _ in range(num_envs)])  
+    base_env = DummyVecEnv([make_env(args) for _ in range(num_envs)])  
     
-    exp_name = "RND_Enabled" if not args.no_rnd else "RND_Disabled"
-    run_id = f"{exp_name}/seed_{current_seed}"
+    rnd_name = "RND_Enabled" if not args.no_rnd else "RND_Disabled"
+    env_name = args.env
+    env_size = args.env_size
+    run_id = f"{rnd_name}_{env_name}_{env_size}/seed_{current_seed}"    
     current_log_dir = os.path.join(args.log_dir, run_id)
     
     # --- Visualización de la primera imagen ---
-    show_env()
+    show_env(args)
     
     if args.no_rnd:
         print("\n===== ENTRENANDO SIN RND =====")        
@@ -198,6 +197,8 @@ def main(args):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
 
+    parser.add_argument("--env", type=str, default="CornerEnv-v0")
+    parser.add_argument("--env-size", type=int, default=55)
     parser.add_argument("--single-train", action="store_true", help="Solo correr una config")
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--log-dir", type=str, default="./tb_logs/")
