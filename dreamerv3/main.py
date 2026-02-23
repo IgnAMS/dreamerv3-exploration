@@ -54,6 +54,7 @@ def main(argv=None):
 
   args = elements.Config(
       **config.run,
+      use_HER=config.use_HER,
       replica=config.replica,
       replicas=config.replicas,
       logdir=config.logdir,
@@ -256,6 +257,10 @@ def make_env(config, index, **overrides):
 
 
 def wrap_env(env, config):
+  if config.use_HER:
+    goal_shape = (config.agent.dyn.rssm.stoch, config.agent.dyn.rssm.classes)
+    env = embodied.wrappers.GoalConditionedWrapper(env, goal_shape=goal_shape, goal_dtype=np.float32)
+  
   for name, space in env.act_space.items():
     if not space.discrete:
       env = embodied.wrappers.NormalizeAction(env, name)
@@ -264,6 +269,7 @@ def wrap_env(env, config):
   for name, space in env.act_space.items():
     if not space.discrete:
       env = embodied.wrappers.ClipAction(env, name)
+  
   return env
 
 

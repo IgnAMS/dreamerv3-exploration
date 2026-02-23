@@ -35,7 +35,8 @@ class Agent(embodied.jax.Agent):
     self.act_space = act_space
     self.config = config
 
-    exclude = ('is_first', 'is_last', 'is_terminal', 'reward')
+    # No anado el goal en los estado
+    exclude = ('is_first', 'is_last', 'is_terminal', 'reward', 'her_goal')
     enc_space = {k: v for k, v in obs_space.items() if k not in exclude}
     dec_space = {k: v for k, v in obs_space.items() if k not in exclude}
     self.enc = {
@@ -48,9 +49,17 @@ class Agent(embodied.jax.Agent):
         'simple': rssm.Decoder,
     }[config.dec.typ](dec_space, **config.dec[config.dec.typ], name='dec')
 
-    self.feat2tensor = lambda x: jnp.concatenate([
-        nn.cast(x['deter']),
-        nn.cast(x['stoch'].reshape((*x['stoch'].shape[:-2], -1)))], -1)
+    if self.config.use_HER:
+      self.feat2tensor = lambda x, g: jnp.concatenate([
+          nn.cast(x['deter']),
+          nn.cast(x['stoch'].reshape((*x['stoch'].shape[:-2], -1))),
+          nn.cast(g.reshape((*g.shape[:-2], -1)))
+      ], -1)
+    else:
+      self.feat2tensor = lambda x, g: jnp.concatenate([
+          nn.cast(x['deter']),
+          nn.cast(x['stoch'].reshape((*x['stoch'].shape[:-2], -1)))
+      ], -1)
 
     scalar = elements.Space(np.float32, ())
     binary = elements.Space(bool, (), 0, 2)
@@ -131,7 +140,14 @@ class Agent(embodied.jax.Agent):
     dec_entry = {}
     if dec_carry:
       dec_carry, dec_entry, recons = self.dec(dec_carry, feat, reset, **kw)
-    policy = self.pol(self.feat2tensor(feat), bdims=1)
+    
+    
+    if self.config.use_HER:
+      tensor_feat = self.feat2tensor(feat, obs['her_goal']) 
+    else:
+      tensor_feat = self.feat2tensor(feat)
+      
+    policy = self.pol(tensor_feat, bdims=1)
     act = sample(policy)
     out = {}
     out['finite'] = elements.tree.flatdict(jax.tree.map(
@@ -178,7 +194,17 @@ class Agent(embodied.jax.Agent):
     metrics.update(mets)
     dec_carry, dec_entries, recons = self.dec(
         dec_carry, repfeat, reset, training)
-    inp = sg(self.feat2tensor(repfeat), skip=self.config.reward_grad)
+    
+    if self.config.user_HER:
+        # Tomamos los goals de los estados iniciales de la imaginación
+        img_goals = sg(obs['her_goal'][:, -K:])
+        # img_goals: (B, K, dim) -> (B*K, H+1, dim)
+        img_goals = jnp.repeat(img_goals[:, :, None, :], H + 1, axis=2)
+        img_goals = img_goals.reshape((B * K, H + 1, *img_goals.shape[3:]))
+        inp = self.feat2tensor(imgfeat, img_goals)
+    else:
+        inp = sg(self.feat2tensor(repfeat), skip=self.config.reward_grad)
+        
     losses['rew'] = self.rew(inp, 2).loss(obs['reward'])
     con = f32(~obs['is_terminal'])
     if self.config.contdisc:
@@ -197,8 +223,19 @@ class Agent(embodied.jax.Agent):
     # Imagination
     K = min(self.config.imag_last or T, T)
     H = self.config.imag_length
-    starts = self.dyn.starts(dyn_entries, dyn_carry, K)
-    policyfn = lambda feat: sample(self.pol(self.feat2tensor(feat), 1))
+    
+    if self.config.use_HER:
+        # Extendemos el goal en caso de requerirlo :)
+        goals = obs['her_goal'][:, -K:]
+        goals = goals.reshape((B * K, 1, -1))
+        img_goals = jnp.tile(goals, (1, H + 1, 1))
+        def policyfn(feat):
+            g = goals.reshape((B * K, -1)) 
+            return sample(self.pol(self.feat2tensor(feat, g), 1))
+    else:
+        policyfn = lambda feat: sample(self.pol(self.feat2tensor(feat), 1))
+
+    starts = self.dyn.starts(dyn_entries, dyn_carry, K) 
     _, imgfeat, imgprevact = self.dyn.imagine(starts, policyfn, H, training)
     first = jax.tree.map(
         lambda x: x[:, -K:].reshape((B * K, 1, *x.shape[2:])), repfeat)
@@ -208,7 +245,12 @@ class Agent(embodied.jax.Agent):
     imgact = concat([imgprevact, lastact], 1)
     assert all(x.shape[:2] == (B * K, H + 1) for x in jax.tree.leaves(imgfeat))
     assert all(x.shape[:2] == (B * K, H + 1) for x in jax.tree.leaves(imgact))
-    inp = self.feat2tensor(imgfeat)
+    
+    if self.config.user_HER:
+        inp = self.feat2tensor(imgfeat, img_goals)
+    else:
+        inp = self.feat2tensor(imgfeat)
+        
     los, imgloss_out, mets = imag_loss(
         imgact,
         self.rew(inp, 2).pred(),

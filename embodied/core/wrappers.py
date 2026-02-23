@@ -416,3 +416,33 @@ class RestartOnException(Wrapper):
       self.env = self._ctor()
       action['reset'] = np.ones_like(action['reset'])
       return self.env.step(action)
+
+
+
+# NANO:
+class GoalConditionedWrapper(Wrapper):
+    def __init__(self, env, goal_shape, goal_dtype=np.float32):
+        super().__init__(env)
+        self._goal_shape = goal_shape
+        self._goal_dtype = goal_dtype
+        self._current_goal = np.zeros(self._goal_shape, dtype=self._goal_dtype)
+        self._obs_space = self.env.obs_space.copy()
+        self._obs_space['her_goal'] = elements.Space(
+            self._goal_dtype, 
+            self._goal_shape,
+            low=-np.inf,
+            high=np.inf
+        )
+    @property
+    def obs_space(self):
+        return self._obs_space
+
+    def step(self, action):
+        # Llamamos al entorno original
+        obs = self.env.step(action)
+        
+        if obs['is_first']:
+            self._current_goal = np.zeros(self._goal_shape, dtype=self._goal_dtype)
+            
+        obs['her_goal'] = self._current_goal.copy()
+        return obs

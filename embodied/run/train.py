@@ -21,6 +21,57 @@ def filtered_replay(replay, space, tran):
   filtered = {k: v for k, v in tran.items() if k in space}
   replay.add(filtered)
 
+class LatentHERCallback:
+    def __init__(self, replay, space, reward_fn, k=4, strategy='future'):
+        """
+        :param replay: Instancia de replay buffer de Dreamer.
+        :param space: Claves (keys) permitidas del observation space.
+        :param reward_fn: Función r(estado, meta) -> float
+        :param k: Número de episodios relabelados a generar por cada original.
+        :param strategy: Estrategia de muestreo de metas ('future', 'final', 'episode').
+        """
+        self.replay = replay
+        self.space = space
+        self.reward_fn = reward_fn
+        self.k = k
+        self.strategy = strategy
+        
+        # Diccionario para guardar el episodio en curso por cada worker paralelo
+        self.episodes = collections.defaultdict(list)
+
+    def __call__(self, tran, worker):
+        self.episodes[worker].append(tran)
+        filtered = {k: v for k, v in tran.items() if k in self.space}
+        self.replay.add(filtered)
+
+        # Si el episodio terminó, generamos los episodios HER
+        if tran['is_last']:
+            episode = self.episodes[worker]
+            self.episodes[worker] = []  # Reseteamos el buffer para ese worker
+            self._generate_her_episodes(episode)
+
+    def _generate_her_episodes(self, episode):
+        ep_len = len(episode)
+
+        for _ in range(self.k):
+            for t, tran in enumerate(episode):
+                new_tran = tran.copy()
+                if self.strategy == 'future':
+                    goal_idx = np.random.randint(t, ep_len)
+                elif self.strategy == 'final':
+                    goal_idx = ep_len - 1
+                else:
+                    goal_idx = np.random.randint(0, ep_len)
+                    
+                goal_stoch = episode[goal_idx]['stoch']
+                new_tran['her_goal'] = goal_stoch
+
+                # Recalcular la recompensa
+                new_tran['reward'] = self.reward_fn(new_tran['stoch'], goal_stoch)
+
+                filtered = {k: v for k, v in new_tran.items() if k in self.space}
+                self.replay.add(filtered)
+
 
 
 def train(make_agent, make_replay, make_env, make_stream, make_logger, args):
@@ -81,7 +132,14 @@ def train(make_agent, make_replay, make_env, make_stream, make_logger, args):
   driver = embodied.Driver(fns, parallel=not args.debug)
   driver.on_step(lambda tran, _: step.increment())
   driver.on_step(lambda tran, _: policy_fps.step())
-  driver.on_step(lambda tran, _: filtered_replay(replay, agent.spaces.keys(), tran))
+  if args.use_HER:
+    reward_fn = lambda goal, stoch: 1.0 if np.linalg.norm(goal - stoch) < 0.2 else 0.0
+    her_callback = LatentHERCallback(replay, space=agent.spaces.keys(), reward_fn=reward_fn)
+    driver.on_step(her_callback)
+  else:
+    driver.on_step(lambda tran, _: filtered_replay(replay, agent.spaces.keys(), tran))
+    
+    
   driver.on_step(logfn)
   driver.on_step(lambda tran, worker: heatmap.increase(tran, worker))
 
