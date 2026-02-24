@@ -206,7 +206,7 @@ class Agent(embodied.jax.Agent):
     con = f32(~obs['is_terminal'])
     if self.config.contdisc:
       con *= 1 - 1 / self.config.horizon
-    losses['con'] = self.con(self.feat2tensor(repfeat), 2).loss(con)
+    losses['con'] = self.con(inp, 2).loss(con)
     for key, recon in recons.items():
       space, value = self.obs_space[key], obs[key]
       assert value.dtype == space.dtype, (key, space, value.dtype)
