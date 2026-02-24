@@ -138,6 +138,7 @@ def make_agent(config):
   cpdir = cpdir.parent if config.replicas > 1 else cpdir
   return Agent(obs_space, act_space, elements.Config(
       **config.agent,
+      use_HER=config.use_HER,
       logdir=config.logdir,
       seed=config.seed,
       jax=config.jax,
