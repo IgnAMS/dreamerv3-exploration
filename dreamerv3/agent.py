@@ -197,7 +197,7 @@ class Agent(embodied.jax.Agent):
     dec_carry, dec_entries, recons = self.dec(
         dec_carry, repfeat, reset, training)
     
-    if self.config.user_HER:
+    if self.config.use_HER:
         # Tomamos los goals de los estados iniciales de la imaginación
         img_goals = sg(obs['her_goal'][:, -K:])
         # img_goals: (B, K, dim) -> (B*K, H+1, dim)
@@ -248,7 +248,7 @@ class Agent(embodied.jax.Agent):
     assert all(x.shape[:2] == (B * K, H + 1) for x in jax.tree.leaves(imgfeat))
     assert all(x.shape[:2] == (B * K, H + 1) for x in jax.tree.leaves(imgact))
     
-    if self.config.user_HER:
+    if self.config.use_HER:
         inp = self.feat2tensor(imgfeat, img_goals)
     else:
         inp = self.feat2tensor(imgfeat)
