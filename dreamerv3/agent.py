@@ -198,7 +198,7 @@ class Agent(embodied.jax.Agent):
         dec_carry, repfeat, reset, training)
     
     if self.config.use_HER:
-        inp = sg(self.feat2tensor(repfeat, obs['goal']), skip=self.config.reward_grad)
+        inp = sg(self.feat2tensor(repfeat, obs['her_goal']), skip=self.config.reward_grad)
     else:
         inp = sg(self.feat2tensor(repfeat), skip=self.config.reward_grad)
         
@@ -225,8 +225,8 @@ class Agent(embodied.jax.Agent):
     def policyfn(feat):
       if self.config.use_HER:
         # Durante el sueño, usamos el goal que inició la trayectoria
-        # obs['goal'][:, -K:] tiene forma (B, K, 32, 64)
-        g = obs['goal'][:, -K:].reshape((B * K, 32, 64))
+        # obs['her_goal'][:, -K:] tiene forma (B, K, 32, 64)
+        g = obs['her_goal'][:, -K:].reshape((B * K, 32, 64))
         return sample(self.pol(self.feat2tensor(feat, g), 1))
       else:
         return sample(self.pol(self.feat2tensor(feat), 1))
@@ -242,7 +242,7 @@ class Agent(embodied.jax.Agent):
     assert all(x.shape[:2] == (B * K, H + 1) for x in jax.tree.leaves(imgact))
     
     if self.config.use_HER:
-        img_goals = sg(obs['goal'][:, -K:]) 
+        img_goals = sg(obs['her_goal'][:, -K:]) 
         img_goals = jnp.repeat(img_goals[:, :, None, :], H + 1, axis=2)
         img_goals = img_goals.reshape((B * K, H + 1, 32, 64))
         inp = self.feat2tensor(imgfeat, img_goals)
