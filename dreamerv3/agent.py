@@ -198,12 +198,7 @@ class Agent(embodied.jax.Agent):
         dec_carry, repfeat, reset, training)
     
     if self.config.use_HER:
-        # Tomamos los goals de los estados iniciales de la imaginación
-        img_goals = sg(obs['her_goal'][:, -K:])
-        # img_goals: (B, K, dim) -> (B*K, H+1, dim)
-        img_goals = jnp.repeat(img_goals[:, :, None, :], H + 1, axis=2)
-        img_goals = img_goals.reshape((B * K, H + 1, *img_goals.shape[3:]))
-        inp = self.feat2tensor(imgfeat, img_goals)
+        inp = sg(self.feat2tensor(repfeat, obs['goal']), skip=self.config.reward_grad)
     else:
         inp = sg(self.feat2tensor(repfeat), skip=self.config.reward_grad)
         
@@ -225,19 +220,17 @@ class Agent(embodied.jax.Agent):
     # Imagination
     K = min(self.config.imag_last or T, T)
     H = self.config.imag_length
-    
-    if self.config.use_HER:
-        # Extendemos el goal en caso de requerirlo :)
-        goals = obs['her_goal'][:, -K:]
-        goals = goals.reshape((B * K, 1, -1))
-        img_goals = jnp.tile(goals, (1, H + 1, 1))
-        def policyfn(feat):
-            g = goals.reshape((B * K, -1)) 
-            return sample(self.pol(self.feat2tensor(feat, g), 1))
-    else:
-        policyfn = lambda feat: sample(self.pol(self.feat2tensor(feat), 1))
-
     starts = self.dyn.starts(dyn_entries, dyn_carry, K) 
+    
+    def policyfn(feat):
+      if self.config.use_HER:
+        # Durante el sueño, usamos el goal que inició la trayectoria
+        # obs['goal'][:, -K:] tiene forma (B, K, 32, 64)
+        g = obs['goal'][:, -K:].reshape((B * K, 32, 64))
+        return sample(self.pol(self.feat2tensor(feat, g), 1))
+      else:
+        return sample(self.pol(self.feat2tensor(feat), 1))
+
     _, imgfeat, imgprevact = self.dyn.imagine(starts, policyfn, H, training)
     first = jax.tree.map(
         lambda x: x[:, -K:].reshape((B * K, 1, *x.shape[2:])), repfeat)
@@ -249,6 +242,9 @@ class Agent(embodied.jax.Agent):
     assert all(x.shape[:2] == (B * K, H + 1) for x in jax.tree.leaves(imgact))
     
     if self.config.use_HER:
+        img_goals = sg(obs['goal'][:, -K:]) 
+        img_goals = jnp.repeat(img_goals[:, :, None, :], H + 1, axis=2)
+        img_goals = img_goals.reshape((B * K, H + 1, 32, 64))
         inp = self.feat2tensor(imgfeat, img_goals)
     else:
         inp = self.feat2tensor(imgfeat)
