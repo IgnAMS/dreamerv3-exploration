@@ -35,6 +35,8 @@ class Agent(embodied.jax.Agent):
     self.act_space = act_space
     self.config = config
 
+    print("config:", self.config)
+
     # No anado el goal en los estado
     exclude = ('is_first', 'is_last', 'is_terminal', 'reward', 'her_goal')
     enc_space = {k: v for k, v in obs_space.items() if k not in exclude}
