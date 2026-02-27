@@ -32,6 +32,7 @@ class LatentHERCallback:
         """
         self.replay = replay
         self.space = space
+        print("latent space: ", self.space)
         self.reward_fn = reward_fn
         self.k = k
         self.strategy = strategy

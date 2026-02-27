@@ -74,6 +74,7 @@ class Driver:
       mask = ~obs['is_last']
       acts = {k: self._mask(v, mask) for k, v in acts.items()}
     self.acts = {**acts, 'reset': obs['is_last'].copy()}
+    print("llaves de outs:", outs.keys())
     
     # NANO: NUEVO
     # infos
