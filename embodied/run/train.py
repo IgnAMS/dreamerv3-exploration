@@ -35,6 +35,7 @@ class LatentHERCallback:
         self.reward_fn = reward_fn
         self.k = k
         self.strategy = strategy
+        self.success_stoch = None
         
         # Diccionario para guardar el episodio en curso por cada worker paralelo
         self.episodes = collections.defaultdict(list)
@@ -42,15 +43,21 @@ class LatentHERCallback:
     def __call__(self, tran, worker):
         self.episodes[worker].append(tran)
         filtered = {k: v for k, v in tran.items() if k in self.space}
+        if self.success_stoch is not None:
+            filtered['her_goal'] = self.success_stoch.copy()
+            # filtered['reward'] = np.array(self.reward_fn(tran['dyn/stoch'], self.success_stoch), np.float32)
         self.replay.add(filtered)
 
         # Si el episodio terminó, generamos los episodios HER
         if tran['is_last']:
             episode = self.episodes[worker]
             self.episodes[worker] = []  # Reseteamos el buffer para ese worker
+            success_idx = next((i for i, t in enumerate(episode) if t['reward'] > 0.5), None)
             self._generate_her_episodes(episode)
 
     def _generate_her_episodes(self, episode):
+        success_indices = [i for i, t in enumerate(episode) if t['reward'] > 0.5]
+        self.success_stoch = success_indices[0] if success_indices else None
         ep_len = len(episode)
         for _ in range(self.k):
             for t, tran in enumerate(episode):
