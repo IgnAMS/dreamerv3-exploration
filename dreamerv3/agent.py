@@ -58,7 +58,7 @@ class Agent(embodied.jax.Agent):
           nn.cast(g.reshape((*g.shape[:-2], -1)))
       ], -1)
     else:
-      self.feat2tensor = lambda x, g: jnp.concatenate([
+      self.feat2tensor = lambda x: jnp.concatenate([
           nn.cast(x['deter']),
           nn.cast(x['stoch'].reshape((*x['stoch'].shape[:-2], -1)))
       ], -1)
