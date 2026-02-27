@@ -66,7 +66,7 @@ class LatentHERCallback:
                 new_tran['her_goal'] = goal_stoch
 
                 # Recalcular la recompensa
-                new_tran['reward'] = self.reward_fn(new_tran['stoch'], goal_stoch)
+                new_tran['reward'] = self.reward_fn(new_tran['dyn/stoch'], goal_stoch)
 
                 filtered = {k: v for k, v in new_tran.items() if k in self.space}
                 self.replay.add(filtered)
