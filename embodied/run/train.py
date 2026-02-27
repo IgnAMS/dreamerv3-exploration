@@ -32,7 +32,6 @@ class LatentHERCallback:
         """
         self.replay = replay
         self.space = space
-        print("latent space: ", self.space)
         self.reward_fn = reward_fn
         self.k = k
         self.strategy = strategy
@@ -53,7 +52,6 @@ class LatentHERCallback:
 
     def _generate_her_episodes(self, episode):
         ep_len = len(episode)
-
         for _ in range(self.k):
             for t, tran in enumerate(episode):
                 new_tran = tran.copy()
@@ -64,7 +62,7 @@ class LatentHERCallback:
                 else:
                     goal_idx = np.random.randint(0, ep_len)
                     
-                goal_stoch = episode[goal_idx]['stoch']
+                goal_stoch = episode[goal_idx]['dyn/stoch']
                 new_tran['her_goal'] = goal_stoch
 
                 # Recalcular la recompensa
