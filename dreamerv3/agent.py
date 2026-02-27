@@ -225,8 +225,9 @@ class Agent(embodied.jax.Agent):
     def policyfn(feat):
       if self.config.use_HER:
         # Durante el sueño, usamos el goal que inició la trayectoria
-        # obs['her_goal'][:, -K:] tiene forma (B, K, 32, 64)
-        g = obs['her_goal'][:, -K:].reshape((B * K, 32, 64))
+        # obs['her_goal'][:, -K:] tiene forma (B, K, (32, 16) o (32, 64) automáticamente)
+        g_raw = obs['goal'][:, -K:]
+        g = g_raw.reshape((B * K, *g_raw.shape[2:]))
         return sample(self.pol(self.feat2tensor(feat, g), 1))
       else:
         return sample(self.pol(self.feat2tensor(feat), 1))
