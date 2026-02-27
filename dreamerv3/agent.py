@@ -271,9 +271,12 @@ class Agent(embodied.jax.Agent):
       feat = sg(repfeat, skip=self.config.repval_grad)
       last, term, rew = [obs[k] for k in ('is_last', 'is_terminal', 'reward')]
       boot = imgloss_out['ret'][:, 0].reshape(B, K)
-      feat, last, term, rew, boot = jax.tree.map(
-          lambda x: x[:, -K:], (feat, last, term, rew, boot))
-      inp = self.feat2tensor(feat)
+      feat, last, term, rew, boot, goal = jax.tree.map(
+          lambda x: x[:, -K:], (feat, last, term, rew, boot, obs.get("her_goal", None)))
+      if self.config.use_HER:
+          inp = self.feat2tensor(feat, goal)
+      else:
+          inp = self.feat2tensor(feat)
       los, reploss_out, mets = repl_loss(
           last, term, rew, boot,
           self.val(inp, 2),
