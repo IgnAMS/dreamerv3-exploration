@@ -245,7 +245,8 @@ class Agent(embodied.jax.Agent):
     if self.config.use_HER:
         img_goals = sg(obs['her_goal'][:, -K:]) 
         img_goals = jnp.repeat(img_goals[:, :, None, :], H + 1, axis=2)
-        img_goals = img_goals.reshape((B * K, H + 1, 32, 64))
+        stoch_dims = img_goals.shape[3:]
+        img_goals = img_goals.reshape((B * K, H + 1, *stoch_dims))
         inp = self.feat2tensor(imgfeat, img_goals)
     else:
         inp = self.feat2tensor(imgfeat)
