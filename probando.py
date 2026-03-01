@@ -114,7 +114,8 @@ def main():
         render_mode=RENDER_MODE,
     )
     """
-    env = TwoRooms(
+    # cookiepedrofull
+    env = CookiePedroFullFixed(
         task="18x29",
         size=PIXEL_SIZE,
         resize='pillow',

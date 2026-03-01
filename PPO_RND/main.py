@@ -140,7 +140,6 @@ def extract_data_from_tb(log_dir, tag="rollout/ep_rew_mean"):
         
         ea = EventAccumulator(event_file)
         ea.Reload()
-        
         if tag in ea.Tags()['scalars']:
             for event in ea.Scalars(tag):
                 data_list.append({
@@ -150,6 +149,39 @@ def extract_data_from_tb(log_dir, tag="rollout/ep_rew_mean"):
                     "seed": seed
                 })
     return pd.DataFrame(data_list)
+
+def extract_episode_count(log_dir):
+    data = []
+    event_files = glob.glob(
+        f"{log_dir}/**/events.out.tfevents.*",
+        recursive=True
+    )
+    for event_file in event_files:
+        parts = event_file.split(os.sep)
+        config = parts[-3]
+        seed = parts[-2]
+        ea = EventAccumulator(event_file)
+        ea.Reload()
+        if (
+            "rollout/ep_len_mean" in ea.Tags()['scalars']
+            and "time/total_timesteps" in ea.Tags()['scalars']
+        ):
+
+            lens = ea.Scalars("rollout/ep_len_mean")
+            steps = ea.Scalars("time/total_timesteps")
+
+            for l, s in zip(lens, steps):
+                approx_eps = s.value / l.value
+
+                data.append({
+                    "step": s.step,
+                    "episodes": approx_eps,
+                    "config": config,
+                    "seed": seed
+                })
+
+    return pd.DataFrame(data)
+
 
 def plot_comparison(log_dir):
     """Genera el gráfico comparativo de Extrinsic Reward"""
@@ -176,6 +208,51 @@ def plot_comparison(log_dir):
     plt.show()
     print(f"Gráfico guardado en: {plot_path}")
 
+def plot_episode_length(log_dir):
+    df = extract_data_from_tb(
+        log_dir,
+        "rollout/ep_len_mean"
+    )
+    df = df.rename(columns={"reward": "avg_step"})
+    fig, axes = plt.subplots(
+        1, 2,
+        figsize=(16, 6),
+        sharex=True
+    )
+
+    # ===== Gráfico completo =====
+    sns.lineplot(
+        data=df,
+        x="step",
+        y="avg_step",
+        hue="config",
+        errorbar="sd",
+        ax=axes[0]
+    )
+    axes[0].set_title("Average Steps per Episode (Full)")
+    axes[0].set_xlabel("Training Step")
+    axes[0].set_ylabel("Episode Length")
+
+    # ===== Zoom =====
+    sns.lineplot(
+        data=df,
+        x="step",
+        y="avg_step",
+        hue="config",
+        errorbar="sd",
+        ax=axes[1],
+        legend=False
+    )
+    axes[1].set_ylim(0, 300)
+    axes[1].set_title("Zoom: Episode Length [0, 300]")
+    axes[1].set_xlabel("Training Step")
+
+    plt.tight_layout()
+    plt.savefig(
+        os.path.join(log_dir, "episode_length.png")
+    )
+    plt.show()
+
 
 def main(args):
     os.makedirs(args.log_dir, exist_ok=True)
@@ -192,7 +269,9 @@ def main(args):
             args_no_rnd = copy.deepcopy(args)
             args_no_rnd.no_rnd = True
             train(args_no_rnd, seed)
+            
         plot_comparison(args.log_dir)
+        plot_episode_length(args.log_dir)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()

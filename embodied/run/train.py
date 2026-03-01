@@ -52,12 +52,12 @@ class LatentHERCallback:
         if tran['is_last']:
             episode = self.episodes[worker]
             self.episodes[worker] = []  # Reseteamos el buffer para ese worker
-            success_idx = next((i for i, t in enumerate(episode) if t['reward'] > 0.5), None)
             self._generate_her_episodes(episode)
 
     def _generate_her_episodes(self, episode):
         success_indices = [i for i, t in enumerate(episode) if t['reward'] > 0.5]
-        self.success_stoch = success_indices[0] if success_indices else None
+        if success_indices:
+            self.success_stoch = episode[success_indices[0]]['dyn/stoch'].copy()
         ep_len = len(episode)
         for _ in range(self.k):
             for t, tran in enumerate(episode):
