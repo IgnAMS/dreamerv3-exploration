@@ -40,6 +40,15 @@ class LatentHERCallback:
         # Diccionario para guardar el episodio en curso por cada worker paralelo
         self.episodes = collections.defaultdict(list)
 
+    def _copy_transition(self, tran):
+        new_tran = {}
+        for k, v in tran.items():
+            if isinstance(v, np.ndarray):
+                new_tran[k] = v.copy()
+            else:
+                new_tran[k] = v
+        return new_tran
+
     def __call__(self, tran, worker):
         self.episodes[worker].append(tran)
         filtered = {k: v for k, v in tran.items() if k in self.space}
@@ -61,7 +70,7 @@ class LatentHERCallback:
         ep_len = len(episode)
         for _ in range(self.k):
             for t, tran in enumerate(episode):
-                new_tran = tran.copy()
+                new_tran = self._copy_transition(tran)
                 if self.strategy == 'future':
                     goal_idx = np.random.randint(t, ep_len)
                 elif self.strategy == 'final':
