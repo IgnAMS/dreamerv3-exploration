@@ -96,7 +96,7 @@ The stochasticity and the model misspecification can be solved by using a determ
 The reward is defined as the sum of the intrinsic reward and the extrinsic reward. We can fit two value heads 
 $V_E$ and $V_I$ separately using their respective returns. The extrinsic reward is stationary and the intrinsic reward is non-stationary.
 
-
+The intrinsic reward is calculated by the norm of the predictor and target network. Then the reward is normalized by dividing it by the standard deviation.
 
 
 \subsection{Assumptions}

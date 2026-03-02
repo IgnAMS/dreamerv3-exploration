@@ -111,7 +111,8 @@ def train(args, current_seed):
         env,
         verbose=0,
         learning_rate=3e-4,
-        n_steps=128,
+        n_steps=128, # Igual que en el paper
+        n_epochs=4, # Igual que en el paper
         device="auto",
         tensorboard_log=args.log_dir,
     )

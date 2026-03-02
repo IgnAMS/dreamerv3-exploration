@@ -177,36 +177,114 @@ class RNDTrainCallback(BaseCallback):
 
     def _on_step(self) -> bool:
         """
-        Train predictor using the latest new_obs (batch) from the rollouts.
+        Solo para logging.
         """
-        # Escribir intrinsic y extrinsic reward
         infos = self.locals["infos"]
-        intr_rewards = [info["intrinsic_reward"] for info in infos]
-        avg_intr = np.mean(intr_rewards)
-        self.logger.record("rollout/intrinsic_reward_avg", avg_intr)
-        raw_intr = [info["raw_intrinsic"] for info in infos]
+        intr_rewards = [info.get("intrinsic_reward", 0) for info in infos]
+        self.logger.record("rollout/intrinsic_reward_avg", np.mean(intr_rewards))
+        
+        raw_intr = [info.get("raw_intrinsic", 0) for info in infos]
         self.logger.record("rollout/intrinsic_reward_raw", np.mean(raw_intr))
-        
-        obs = self.locals["new_obs"]
-        self.obs_buffer.append(obs)
-        
-        num_envs = obs.shape[0]
-        total_samples = len(self.obs_buffer) * num_envs
-        if total_samples >= self.batch_size:
-            # Concatenamos todo en un solo array de NumPy (B, H, W, C)
-            batch_obs = np.concatenate(self.obs_buffer, axis=0)
-            
-            # Preprocesamos al tensor (B, C, H, W) en la GPU/CPU
-            obs_t = preprocess_obs(batch_obs, self.device)
-            
-            # Entrenamos la red predictora
-            _ = self.rnd.train_step(obs_t)
-            
-            # Limpiamos el buffer para el siguiente lote
-            self.obs_buffer = []
-        
         return True
+
+    def _on_rollout_end(self) -> None:
+        """
+        Aquí ocurre la optimización (n_opt) como dice el paper.
+        """
+        # 1. Obtenemos los hiperparámetros de PPO
+        n_epochs = self.model.n_epochs  # Este es el 'n_opt' del paper
+        batch_size = self.batch_size or self.model.batch_size
+        
+        # 2. Extraemos todas las observaciones del buffer de PPO
+        # (N_STEPS * N_ENVS, H, W, C)
+        obs_buffer = self.model.rollout_buffer.observations
+        
+        # Aplanamos los ejes de envs y steps para tener un pool de muestras
+        shape = obs_buffer.shape
+        flat_obs = obs_buffer.reshape((-1,) + shape[2:]) 
+        
+        total_samples = flat_obs.shape[0]
+        
+        # 3. Ciclo de optimización: 'for _ in range(n_opt)'
+        indices = np.arange(total_samples)
+        
+        for _ in range(n_epochs):
+            np.random.shuffle(indices)
             
+            for start in range(0, total_samples, batch_size):
+                end = start + batch_size
+                batch_idx = indices[start:end]
+                
+                # Extraemos el batch Bi del paper
+                batch_obs = flat_obs[batch_idx]
+                
+                # Preprocesamos y entrenamos la red predictora (Distillation loss)
+                obs_t = preprocess_obs(batch_obs, self.device)
+                loss = self.rnd.train_step(obs_t)
+                
+        self.logger.record("train/rnd_loss", loss)
+
+class RNDTrainCallback(BaseCallback):
+    def __init__(self, rnd_model: RNDModel, device, batch_size=None):
+        super().__init__()
+        self.rnd = rnd_model
+        self.device = device
+        self.batch_size = batch_size
+        self.rnd_update_count = 0  # Contador de minibatches procesados por RND
+
+    def _on_step(self) -> bool:
+        """
+        Logging de recompensas durante la recolección.
+        """
+        infos = self.locals["infos"]
+        # Usamos .get() por seguridad si alguna info no trae la llave
+        intr_rewards = [info["intrinsic_reward"] for info in infos]
+        raw_intr = [info["raw_intrinsic"] for info in infos]
+        
+        self.logger.record("rollout/intrinsic_reward_avg", np.mean(intr_rewards))
+        self.logger.record("rollout/intrinsic_reward_raw", np.mean(raw_intr))
+        return True
+
+    def _on_rollout_end(self) -> None:
+        """
+        Sincronización exacta con el ciclo de optimización de PPO.
+        """
+        #  Leer parámetros del paper directamente de PPO
+        n_epochs = self.model.n_epochs
+        batch_size = self.batch_size or self.model.batch_size 
+        
+        # Extraer y preparar datos 
+        # El buffer tiene forma (n_steps, n_envs, H, W, C)
+        obs_buffer = self.model.rollout_buffer.observations
+        
+        # Aplanamos para tener (N * K) muestras totales
+        flat_obs = obs_buffer.reshape((-1,) + obs_buffer.shape[2:])
+        total_samples = flat_obs.shape[0]
+        
+        indices = np.arange(total_samples)
+        last_loss = 0
+        for _ in range(n_epochs):
+            np.random.shuffle(indices)
+            for start in range(0, total_samples, batch_size):
+                end = start + batch_size
+                batch_idx = indices[start:end]
+                batch_obs = flat_obs[batch_idx]
+                obs_t = preprocess_obs(batch_obs, self.device)
+                last_loss = self.rnd.train_step(obs_t)
+                
+                # Aumentamos contador de actualizaciones de red (minibatches)
+                self.rnd_update_count += 1
+        
+        #  Logs de actualizaciones y pérdidas 
+        self.logger.record("train/ppo_update_cycles", self.model._n_updates)
+        self.logger.record("train/rnd_total_gradient_steps", self.rnd_update_count)
+        self.logger.record("train/rnd_loss", last_loss)
+
+        # Log informativo de qué estamos usando
+        if self.model._n_updates == 1:
+            print(f"RND configurado: n_epochs={n_epochs}, batch_size={batch_size}, total_samples={total_samples}")
+
+
 def pretrain_RND(rnd_model: RNDModel, base_env: DummyVecEnv, device, pre_train_steps=20000):
     print("Iniciando pre-entrenamiento RND (acciones aleatorias)...")
     obs = base_env.reset()
