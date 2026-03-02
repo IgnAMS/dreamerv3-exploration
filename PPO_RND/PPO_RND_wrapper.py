@@ -205,7 +205,6 @@ class RNDTrainCallback(BaseCallback):
             # Limpiamos el buffer para el siguiente lote
             self.obs_buffer = []
         
-        
         return True
             
 def pretrain_RND(rnd_model: RNDModel, base_env: DummyVecEnv, device, pre_train_steps=20000):
@@ -214,9 +213,8 @@ def pretrain_RND(rnd_model: RNDModel, base_env: DummyVecEnv, device, pre_train_s
     for step in range(pre_train_steps):
         actions = np.array([base_env.action_space.sample() for _ in range(base_env.num_envs)])
         new_obs, rewards, dones, infos = base_env.step(actions)
-        
         obs_t = preprocess_obs(new_obs, device)
-        rnd_model.train_step(obs_t)
+        # rnd_model.train_step(obs_t)
         
         if step % 100 == 0:
             print(f"Pre-train RND: {step}/{pre_train_steps}")

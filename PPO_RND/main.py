@@ -97,11 +97,11 @@ def train(args, current_seed):
         obs_shape = (c, h, w)
         rnd_model = RNDModel(obs_shape, feature_dim=512, device=device).to(device)
 
-        # pre-train predictor on random policy using base_env (without wrapper)
-        pretrain_RND(rnd_model, base_env, device, pre_train_steps=args.pretrain)
-
         # wrap the env AFTER pretraining so we add intrinsic reward to PPO
         env = RNDVecEnv(base_env, rnd_model, device, intrinsic_coef=args.intrinsic_coef, gamma=args.gamma)
+        
+        # pre-train predictor on random policy using env
+        pretrain_RND(rnd_model, env, device, pre_train_steps=args.pretrain)
 
         # create callback to keep training predictor during PPO training
         callback = RNDTrainCallback(rnd_model, device)
