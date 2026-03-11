@@ -19,9 +19,10 @@ test_observation_raw.png
 *.synctex.gz
 papers_summary/**/*.out
 papers_summary/**/*.log
-
+bitacora_investigacion
 
 # Modelo:
 *.pt
 *.pth
 *.weights
+
