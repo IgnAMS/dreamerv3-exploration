@@ -51,12 +51,13 @@ class SimpleEnv(embodied.Env):
                 kwargs.update({"height": int(grid_size[0]), "width": int(grid_size[1])})
             else:
                 kwargs.update({"length": grid_size}) 
+                kwargs.update({"size": grid_size})
             self.raw = make_env(
                 agent_start_pos=agent_start_pos,
                 agent_start_dir=agent_start_dir,
                 max_steps=max_steps,
                 render_mode=render_mode,
-                **kwargs  
+                **kwargs
             )
         else:
             print("Make agent no existe")
