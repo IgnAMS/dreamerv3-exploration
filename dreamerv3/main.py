@@ -54,6 +54,7 @@ def main(argv=None):
 
   args = elements.Config(
       **config.run,
+      her=config.her,
       replica=config.replica,
       replicas=config.replicas,
       logdir=config.logdir,
