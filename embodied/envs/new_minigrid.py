@@ -49,8 +49,9 @@ class SimpleEnv(embodied.Env):
         if make_env:
             if isinstance(grid_size, list):
                 kwargs.update({"height": int(grid_size[0]), "width": int(grid_size[1])})
-            else:
+            elif "length" in kwargs:
                 kwargs.update({"length": grid_size}) 
+            else:    
                 kwargs.update({"size": grid_size})
             self.raw = make_env(
                 agent_start_pos=agent_start_pos,
