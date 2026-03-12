@@ -27,7 +27,7 @@ defaults:
     user: ''
   
   her:
-    enabled: True
+    enabled: False
     strategy: future
     k: 0.8
 
