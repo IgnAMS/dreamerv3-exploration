@@ -377,6 +377,23 @@ class MiddleGoal(SimpleImageEnv):
             kwargs=kwargs           
         )
 
+class CornerEnv(SimpleImageEnv):
+    def __init__(
+        self,
+        task=None,
+        **kwargs
+    ):
+        from cookie_env.envs import CornerEnv
+        super().__init__(
+            task=task,
+            make_env=CornerEnv,
+            full_obs=True,
+            rgb_img_obs="full",
+            onehot=False,
+            max_steps=4*18*29,
+            **kwargs
+        )
+
 class CookiePedroFull(SimpleImageEnv):
     def __init__(
         self,

@@ -240,6 +240,7 @@ def make_env(config, index, **overrides):
       'cookiepedrodeterministic': 'embodied.envs.new_minigrid:DeterministicCookie',
       'cookiepedrotwocookies': 'embodied.envs.new_minigrid:TwoCookies',
       'cookiepedrofullfixed': 'embodied.envs.new_minigrid:CookiePedroFullFixed',
+      'corner': 'embodied.envs.new_minigrid:CornerEnv',
       'corridor': 'embodied.envs.new_minigrid:Corridor',
       'tworooms': 'embodied.envs.new_minigrid:TwoRooms',
   }[suite]
