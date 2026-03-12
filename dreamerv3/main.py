@@ -264,6 +264,8 @@ def wrap_env(env, config):
   for name, space in env.act_space.items():
     if not space.discrete:
       env = embodied.wrappers.ClipAction(env, name)
+  if config.her.enabled:
+    env = embodied.wrappers.AddGoalWrapper(env)
   return env
 
 
@@ -277,7 +279,8 @@ def make_stream(config, replay, mode):
       prefix=config.replay_context,
       strict=(mode == 'train'),
       contiguous=True)
-
+  if config.her.enabled:
+    pass
   return stream
 
 

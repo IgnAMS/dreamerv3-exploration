@@ -416,3 +416,165 @@ class RestartOnException(Wrapper):
       self.env = self._ctor()
       action['reset'] = np.ones_like(action['reset'])
       return self.env.step(action)
+
+
+class AddGoalWrapper(Wrapper):
+    """
+    Modifica la observación de imagen añadiendo `goal_rows` filas al bottom.
+
+    Parámetros
+    ----------
+    env       : entorno subyacente
+    obs_key   : key de la imagen en obs_space  (default 'image')
+    goal_rows : número de filas del grid a usar como goal  (default 1)
+    """
+
+    def __init__(self, env, obs_key: str = 'image', goal_rows: int = 1):
+        super().__init__(env)
+        self._env = env
+        self._obs_key = obs_key
+        self._goal_rows = goal_rows
+
+        img_space = env.obs_space[obs_key]      # Space(uint8, (H, W, C))
+        H, W, C = img_space.shape
+        assert goal_rows <= H, f"goal_rows={goal_rows} > H={H}"
+        self._H, self._W, self._C = H, W, C
+
+        # imagen ampliada: H + goal_rows filas
+        self._new_img_space = elements.Space(
+            np.uint8, (H + goal_rows, W, C))
+        # achieved_goal: las goal_rows extraídas, en su forma espacial
+        self._achieved_space = elements.Space(
+            np.uint8, (goal_rows, W, C))
+
+        # placeholder de zeros para el goal al momento de colección
+        self._goal_zeros = np.zeros((goal_rows, W, C), dtype=np.uint8)
+
+    def __getattr__(self, name):
+        return getattr(self._env, name)
+
+    @property
+    def obs_space(self):
+        spaces = dict(self._env.obs_space)
+        spaces[self._obs_key] = self._new_img_space   # imagen ampliada
+        spaces['achieved_goal'] = self._achieved_space
+        return spaces
+
+    @property
+    def act_space(self):
+        return self._env.act_space
+
+    def step(self, action):
+        obs = self._env.step(action)
+        img = obs.get(self._obs_key)                  # (H, W, C) uint8
+
+        if img is not None:
+            # achieved_goal = primeras goal_rows filas del grid
+            achieved = img[:self._goal_rows].copy()   # (goal_rows, W, C)
+            # imagen ampliada = imagen original + zeros al bottom (placeholder)
+            new_img = np.concatenate(
+                [img, self._goal_zeros], axis=0)      # (H+goal_rows, W, C)
+        else:
+            achieved = self._goal_zeros.copy()
+            new_img = np.zeros(
+                (self._H + self._goal_rows, self._W, self._C), dtype=np.uint8)
+
+        obs[self._obs_key] = new_img
+        obs['achieved_goal'] = achieved
+        return obs
+
+    def close(self):
+        self._env.close()
+
+
+# ---------------------------------------------------------------------------
+# HER stream wrapper
+# ---------------------------------------------------------------------------
+
+class HERStream:
+    """
+    Wrapper de stream que relabela el goal en la imagen (últimas goal_rows filas).
+
+    Parámetros
+    ----------
+    stream    : iterable de batches  dict{str: ndarray(B, T, ...)}
+    obs_key   : key de la imagen en el batch  (default 'image')
+    goal_rows : filas reservadas al bottom de la imagen para el goal
+    strategy  : 'random_z' | 'future' | 'final' | 'random_ep'
+    her_ratio : fracción de pasos que se relabelan
+    seed      : semilla opcional
+    """
+
+    def __init__(
+        self,
+        stream,
+        obs_key: str = 'image',
+        goal_rows: int = 1,
+        strategy: str = 'random_z',
+        her_ratio: float = 0.8,
+        seed: int | None = None,
+    ):
+        assert strategy in ('random_z', 'future', 'final', 'random_ep'), strategy
+        self._stream = stream
+        self._obs_key = obs_key
+        self._goal_rows = goal_rows
+        self._strategy = strategy
+        self._her_ratio = her_ratio
+        self._rng = np.random.default_rng(seed)
+
+    def __iter__(self):
+        for batch in self._stream:
+            yield self._relabel(batch)
+
+    # ------------------------------------------------------------------
+    def _relabel(self, batch: dict) -> dict:
+        batch = dict(batch)
+        imgs = batch[self._obs_key].copy()  # (B, T, H+goal_rows, W, C) uint8
+        B, T = imgs.shape[:2]
+        H_obs = imgs.shape[2] - self._goal_rows   # filas reales de la obs
+
+        # ── Fase de prueba: ruido aleatorio como goal ─────────────────
+        if self._strategy == 'random_z':
+            noise = self._rng.integers(
+                0, 256,
+                (B, T, self._goal_rows, imgs.shape[3], imgs.shape[4]),
+                dtype=np.uint8)
+            imgs[:, :, H_obs:, :, :] = noise
+            batch[self._obs_key] = imgs
+            return batch
+
+        # ── Estrategias HER: fuente = achieved_goal almacenado ────────
+        if 'achieved_goal' not in batch:
+            return batch
+
+        achieved = batch['achieved_goal']   # (B, T, goal_rows, W, C) uint8
+        mask = self._rng.random((B, T)) < self._her_ratio
+
+        if self._strategy == 'future':
+            for b in range(B):
+                for t in range(T):
+                    if mask[b, t]:
+                        t_future = int(self._rng.integers(t, T))
+                        imgs[b, t, H_obs:] = achieved[b, t_future]
+
+        elif self._strategy == 'final':
+            for b in range(B):
+                last_t = T - 1
+                for t2 in range(T - 1, -1, -1):
+                    if batch['is_last'][b, t2]:
+                        last_t = t2
+                        break
+                for t in range(T):
+                    if mask[b, t]:
+                        imgs[b, t, H_obs:] = achieved[b, last_t]
+
+        elif self._strategy == 'random_ep':
+            for b in range(B):
+                for t in range(T):
+                    if mask[b, t]:
+                        rb = int(self._rng.integers(B))
+                        rt = int(self._rng.integers(T))
+                        imgs[b, t, H_obs:] = achieved[rb, rt]
+
+        batch[self._obs_key] = imgs
+        return batch
