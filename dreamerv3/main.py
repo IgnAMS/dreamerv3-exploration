@@ -265,7 +265,11 @@ def wrap_env(env, config):
     if not space.discrete:
       env = embodied.wrappers.ClipAction(env, name)
   if config.her.enabled:
-    env = embodied.wrappers.AddGoalWrapper(env)
+    env = embodied.wrappers.AddGoalWrapper(
+        env,
+        stoch_rows=config.agent.dyn.rssm.stoch,
+        stoch_classes=config.agent.dyn.rssm.classes,
+    )
   return env
 
 
@@ -280,7 +284,13 @@ def make_stream(config, replay, mode):
       strict=(mode == 'train'),
       contiguous=True)
   if config.her.enabled:
-    pass
+      stream = embodied.wrappers.HERStream(
+          stream,
+          stoch_rows=config.agent.dyn.rssm.stoch,
+          stoch_classes=config.agent.dyn.rssm.classes,
+          k=config.her.k,
+          strategy=config.her.strategy,
+      )
   return stream
 
 

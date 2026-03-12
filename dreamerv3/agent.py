@@ -35,8 +35,7 @@ class Agent(embodied.jax.Agent):
     self.act_space = act_space
     self.config = config
 
-    her_keys = ('achieved_goal',)
-    exclude = ('is_first', 'is_last', 'is_terminal', 'reward') + her_keys
+    exclude = ('is_first', 'is_last', 'is_terminal', 'reward', 'achieved_goal')
     enc_space = {k: v for k, v in obs_space.items() if k not in exclude}
     dec_space = {k: v for k, v in obs_space.items() if k not in exclude}
     self.enc = {
@@ -92,6 +91,10 @@ class Agent(embodied.jax.Agent):
     spaces = {}
     spaces['consec'] = elements.Space(np.int32)
     spaces['stepid'] = elements.Space(np.uint8, 20)
+    if self.config.her.enabled:
+      stoch_rows = self.config.dyn[self.config.dyn.typ].stoch
+      spaces['achieved_goal'] = elements.Space(np.int32, (stoch_rows,))
+
     if self.config.replay_context:
       spaces.update(elements.tree.flatdict(dict(
           enc=self.enc.entry_space,
@@ -138,6 +141,12 @@ class Agent(embodied.jax.Agent):
     out['finite'] = elements.tree.flatdict(jax.tree.map(
         lambda x: jnp.isfinite(x).all(range(1, x.ndim)),
         dict(obs=obs, carry=carry, tokens=tokens, feat=feat, act=act)))
+    
+    if self.config.her.enabled:
+      # HER: guardar achieved_goal = argmax del stoch por cada fila
+      # feat['stoch'] shape: (B, stoch_rows, stoch_classes)
+      out['achieved_goal'] = feat['stoch'].argmax(-1).astype(jnp.int32)
+    
     carry = (enc_carry, dyn_carry, dec_carry, act)
     if self.config.replay_context:
       out.update(elements.tree.flatdict(dict(

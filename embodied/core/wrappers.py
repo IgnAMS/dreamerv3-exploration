@@ -420,161 +420,177 @@ class RestartOnException(Wrapper):
 
 class AddGoalWrapper(Wrapper):
     """
-    Modifica la observación de imagen añadiendo `goal_rows` filas al bottom.
-
+    Añade 'goal' como observación separada (float32 vector de zeros).
+    El encoder lo verá; el decoder NO lo reconstruirá (controlado en agent.py).
+ 
     Parámetros
     ----------
-    env       : entorno subyacente
-    obs_key   : key de la imagen en obs_space  (default 'image')
-    goal_rows : número de filas del grid a usar como goal  (default 1)
+    env        : entorno subyacente
+    stoch_rows : número de categorías/filas del z estocástico  (config.agent.stoch)
+    stoch_classes : número de clases por categoría             (config.agent.classes)
     """
-
-    def __init__(self, env, obs_key: str = 'image', goal_rows: int = 1):
+ 
+    def __init__(self, env, stoch_rows: int, stoch_classes: int):
         super().__init__(env)
-        self._env = env
-        self._obs_key = obs_key
-        self._goal_rows = goal_rows
-
-        img_space = env.obs_space[obs_key]      # Space(uint8, (H, W, C))
-        H, W, C = img_space.shape
-        assert goal_rows <= H, f"goal_rows={goal_rows} > H={H}"
-        self._H, self._W, self._C = H, W, C
-
-        # imagen ampliada: H + goal_rows filas
-        self._new_img_space = elements.Space(
-            np.uint8, (H + goal_rows, W, C))
-        # achieved_goal: las goal_rows extraídas, en su forma espacial
-        self._achieved_space = elements.Space(
-            np.uint8, (goal_rows, W, C))
-
-        # placeholder de zeros para el goal al momento de colección
-        self._goal_zeros = np.zeros((goal_rows, W, C), dtype=np.uint8)
-
+        self.env = env
+        self._goal_dim = stoch_rows + stoch_classes
+        self._goal_zeros = np.zeros(self._goal_dim, dtype=np.float32)
+        self._goal_space = elements.Space(np.float32, (self._goal_dim,))
+ 
+    def __len__(self):
+        return len(self.env)
+ 
+    def __bool__(self):
+        return bool(self.env)
+ 
     def __getattr__(self, name):
-        return getattr(self._env, name)
-
+        if name.startswith('__'):
+            raise AttributeError(name)
+        try:
+            return getattr(self.env, name)
+        except AttributeError:
+            raise ValueError(name)
+ 
     @property
     def obs_space(self):
-        spaces = dict(self._env.obs_space)
-        spaces[self._obs_key] = self._new_img_space   # imagen ampliada
-        spaces['achieved_goal'] = self._achieved_space
+        spaces = dict(self.env.obs_space)
+        spaces['goal'] = self._goal_space
         return spaces
-
+ 
     @property
     def act_space(self):
-        return self._env.act_space
-
+        return self.env.act_space
+ 
     def step(self, action):
-        obs = self._env.step(action)
-        img = obs.get(self._obs_key)                  # (H, W, C) uint8
-
-        if img is not None:
-            # achieved_goal = primeras goal_rows filas del grid
-            achieved = img[:self._goal_rows].copy()   # (goal_rows, W, C)
-            # imagen ampliada = imagen original + zeros al bottom (placeholder)
-            new_img = np.concatenate(
-                [img, self._goal_zeros], axis=0)      # (H+goal_rows, W, C)
-        else:
-            achieved = self._goal_zeros.copy()
-            new_img = np.zeros(
-                (self._H + self._goal_rows, self._W, self._C), dtype=np.uint8)
-
-        obs[self._obs_key] = new_img
-        obs['achieved_goal'] = achieved
+        obs = self.env.step(action)
+        obs['goal'] = self._goal_zeros.copy() # Relabel en stream
         return obs
-
+ 
     def close(self):
-        self._env.close()
+        self.env.close()
+        
 
-
-# ---------------------------------------------------------------------------
-# HER stream wrapper
-# ---------------------------------------------------------------------------
 
 class HERStream:
     """
-    Wrapper de stream que relabela el goal en la imagen (últimas goal_rows filas).
-
+    Implementa el algoritmo HER del paper (Algorithm 1).
+ 
+    Por cada batch de B episodios, produce B*(1+k) episodios:
+        - B originales con goal = zeros (tal como se recolectaron)
+        - B*k relabelados: para cada episodio b se samplea k veces un goal
+          a partir del achieved_goal almacenado en el replay.
+ 
     Parámetros
     ----------
-    stream    : iterable de batches  dict{str: ndarray(B, T, ...)}
-    obs_key   : key de la imagen en el batch  (default 'image')
-    goal_rows : filas reservadas al bottom de la imagen para el goal
-    strategy  : 'random_z' | 'future' | 'final' | 'random_ep'
-    her_ratio : fracción de pasos que se relabelan
-    seed      : semilla opcional
+    stream        : iterable de batches dict{str: ndarray(B, T, ...)}
+    stoch_rows    : número de filas del z estocástico
+    stoch_classes : número de clases por fila del z estocástico
+    k             : número de goals relabelados por transición (HER ratio)
+    strategy      : 'future' | 'final' | 'random_ep'
+    seed          : semilla opcional
     """
-
+ 
     def __init__(
         self,
         stream,
-        obs_key: str = 'image',
-        goal_rows: int = 1,
-        strategy: str = 'random_z',
-        her_ratio: float = 0.8,
+        stoch_rows: int,
+        stoch_classes: int,
+        k: int = 4,
+        strategy: str = 'future',
         seed: int | None = None,
     ):
-        assert strategy in ('random_z', 'future', 'final', 'random_ep'), strategy
+        assert strategy in ('future', 'final', 'random_ep'), strategy
         self._stream = stream
-        self._obs_key = obs_key
-        self._goal_rows = goal_rows
+        self._stoch_rows = stoch_rows
+        self._stoch_classes = stoch_classes
+        self._k = k
         self._strategy = strategy
-        self._her_ratio = her_ratio
         self._rng = np.random.default_rng(seed)
-
+ 
     def __iter__(self):
         for batch in self._stream:
             yield self._relabel(batch)
-
+ 
     # ------------------------------------------------------------------
+    def _make_goal(self, achieved: np.ndarray) -> np.ndarray:
+        """
+        Construye un goal como double one-hot a partir de achieved_goal.
+ 
+        Parámetros
+        ----------
+        achieved : (stoch_rows,) int32  — argmax del z estocástico
+ 
+        Retorna
+        -------
+        goal : (stoch_rows + stoch_classes,) float32
+            onehot(row_idx, stoch_rows) ⊕ onehot(achieved[row_idx], stoch_classes)
+            donde row_idx se samplea aleatoriamente entre las stoch_rows filas.
+        """
+        row_idx = int(self._rng.integers(self._stoch_rows))
+        class_val = int(achieved[row_idx])
+        row_oh = np.zeros(self._stoch_rows, dtype=np.float32)
+        row_oh[row_idx] = 1.0
+        cls_oh = np.zeros(self._stoch_classes, dtype=np.float32)
+        cls_oh[class_val] = 1.0
+        return np.concatenate([row_oh, cls_oh])
+ 
+    def _sample_achieved(
+        self, achieved: np.ndarray, b: int, t: int, B: int, T: int
+    ) -> np.ndarray:
+        """Samplea un achieved_goal según la estrategia elegida."""
+        if self._strategy == 'future':
+            t_future = int(self._rng.integers(t, T))
+            return achieved[b, t_future]
+ 
+        elif self._strategy == 'final':
+            return achieved[b, T - 1]
+ 
+        elif self._strategy == 'random_ep':
+            rb = int(self._rng.integers(B))
+            rt = int(self._rng.integers(T))
+            return achieved[rb, rt]                     # (stoch_rows,)
+ 
     def _relabel(self, batch: dict) -> dict:
-        batch = dict(batch)
-        imgs = batch[self._obs_key].copy()  # (B, T, H+goal_rows, W, C) uint8
-        B, T = imgs.shape[:2]
-        H_obs = imgs.shape[2] - self._goal_rows   # filas reales de la obs
-
-        # ── Fase de prueba: ruido aleatorio como goal ─────────────────
-        if self._strategy == 'random_z':
-            noise = self._rng.integers(
-                0, 256,
-                (B, T, self._goal_rows, imgs.shape[3], imgs.shape[4]),
-                dtype=np.uint8)
-            imgs[:, :, H_obs:, :, :] = noise
-            batch[self._obs_key] = imgs
-            return batch
-
-        # ── Estrategias HER: fuente = achieved_goal almacenado ────────
+        """
+        Por cada episodio b en el batch genera k copias con goals relabelados.
+        Output shape: (B*(1+k), T, ...)
+        """
+        B, T = batch['is_first'].shape
+ 
+        # shape: (B, T, stoch_rows) int32
         if 'achieved_goal' not in batch:
             return batch
-
-        achieved = batch['achieved_goal']   # (B, T, goal_rows, W, C) uint8
-        mask = self._rng.random((B, T)) < self._her_ratio
-
-        if self._strategy == 'future':
+        achieved = batch['achieved_goal']
+ 
+        # Construir los k*B episodios relabelados 
+        # Para cada (b, t) en el episodio b, todos los pasos comparten
+        # el mismo goal relabelado (consistencia temporal dentro del chunk).
+        # Se samplea un goal por (b, k_idx) — igual que en el paper.
+        her_batches = []
+        for _ in range(self._k):
+            her_batch = {key: val.copy() for key, val in batch.items()}
+            goals = her_batch['goal'].copy()    # (B, T, goal_dim)
+            rewards = her_batch['reward'].copy()
+ 
             for b in range(B):
                 for t in range(T):
-                    if mask[b, t]:
-                        t_future = int(self._rng.integers(t, T))
-                        imgs[b, t, H_obs:] = achieved[b, t_future]
-
-        elif self._strategy == 'final':
-            for b in range(B):
-                last_t = T - 1
-                for t2 in range(T - 1, -1, -1):
-                    if batch['is_last'][b, t2]:
-                        last_t = t2
-                        break
-                for t in range(T):
-                    if mask[b, t]:
-                        imgs[b, t, H_obs:] = achieved[b, last_t]
-
-        elif self._strategy == 'random_ep':
-            for b in range(B):
-                for t in range(T):
-                    if mask[b, t]:
-                        rb = int(self._rng.integers(B))
-                        rt = int(self._rng.integers(T))
-                        imgs[b, t, H_obs:] = achieved[rb, rt]
-
-        batch[self._obs_key] = imgs
-        return batch
+                    sampled_achieved = self._sample_achieved(achieved, b, t, B, T)
+                    g_prime = self._make_goal(sampled_achieved)
+                    goals[b, t] = g_prime
+                    
+                    row_idx   = int(g_prime[:self._stoch_rows].argmax())
+                    class_val = int(g_prime[self._stoch_rows:].argmax())
+                    reached   = (int(achieved[b, t, row_idx]) == class_val)
+                    rewards[b, t] = 1.0 if reached else 0.0
+ 
+            her_batch['goal'] = goals
+            her_batch['reward'] = rewards
+            her_batches.append(her_batch)
+ 
+        # Concatenar: originales + k*B relabelados
+        all_batches = [batch] + her_batches
+        out = {
+            key: np.concatenate([b[key] for b in all_batches], axis=0)
+            for key in batch
+        }
+        return out
