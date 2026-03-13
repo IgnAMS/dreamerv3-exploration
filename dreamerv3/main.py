@@ -65,14 +65,6 @@ def main(argv=None):
       consec_report=config.consec_report,
       replay_context=config.replay_context,
   )
-  """
-  if config.her.enabled:
-    her_batch = config.batch_size * (1 + config.her.k)
-    config = config.update({'batch_size': her_batch})
-    args = args.update(batch_size=her_batch)
-  print('batch_size en args:', args.batch_size)
-  print('batch_size en config:', config.batch_size)
-  """
   
   if config.script == 'train':
     embodied.run.train(
@@ -294,14 +286,6 @@ def make_stream(config, replay, mode):
       prefix=config.replay_context,
       strict=(mode == 'train'),
       contiguous=True)
-  if config.her.enabled:
-      stream = embodied.wrappers.HERStream(
-          stream,
-          stoch_rows=config.agent.dyn.rssm.stoch,
-          stoch_classes=config.agent.dyn.rssm.classes,
-          k=config.her.k,
-          strategy=config.her.strategy,
-      )
   return stream
 
 

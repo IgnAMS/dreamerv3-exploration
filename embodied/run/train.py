@@ -22,6 +22,25 @@ def filtered_replay(replay, space, tran):
   replay.add(filtered)
 
 
+def _make_her_goal(achieved, stoch_rows, stoch_classes, rng):
+  """
+  Construye un goal double one-hot a partir de achieved_goal.
+  achieved : (stoch_rows,) int32
+  """
+  row_idx   = int(rng.integers(stoch_rows))
+  class_val = int(achieved[row_idx])
+  row_oh  = np.zeros(stoch_rows,    dtype=np.float32)
+  cls_oh  = np.zeros(stoch_classes, dtype=np.float32)
+  row_oh[row_idx]   = 1.0
+  cls_oh[class_val] = 1.0
+  return np.concatenate([row_oh, cls_oh]), row_idx, class_val
+ 
+ 
+def _her_reached(achieved, row_idx, class_val):
+  return int(achieved[row_idx]) == class_val
+
+
+
 
 def train(make_agent, make_replay, make_env, make_stream, make_logger, args):
 
@@ -40,13 +59,22 @@ def train(make_agent, make_replay, make_env, make_stream, make_logger, args):
   
   heatmap = Heatmap()
   
-  her_batch_size = args.batch_size * (1 + args.her.k) if args.her.enabled else args.batch_size
-  batch_steps = her_batch_size * args.batch_length
+  batch_steps = args.batch_size * args.batch_length
   should_train = elements.when.Ratio(args.train_ratio / batch_steps)
   should_log = embodied.LocalClock(args.log_every)
   should_report = embodied.LocalClock(args.report_every)
   should_save = embodied.LocalClock(args.save_every)
 
+  her_enabled = getattr(args.her, 'enabled', False)
+  if her_enabled:
+    her_k           = args.her.k
+    her_strategy    = args.her.strategy
+    her_stoch_rows  = args.her.stoch_rows
+    her_stoch_classes = args.her.stoch_classes
+    her_rng         = np.random.default_rng()
+    episode_buffers = defaultdict(list)
+    
+    
   @elements.timer.section('logfn')
   def logfn(tran, worker):
     episode = episodes[worker]
@@ -76,6 +104,63 @@ def train(make_agent, make_replay, make_env, make_stream, make_logger, args):
         result['reward_rate'] = (np.abs(rew[1:] - rew[:-1]) >= 0.01).mean()
       epstats.add(result)
 
+  def her_replay_fn(tran, worker):
+    """
+    Acumula transiciones por episodio. Al final del episodio genera k
+    transiciones relabeladas por cada timestep y las añade al replay,
+    exactamente como en Algorithm 1 del paper HER.
+    """
+    # Solo acumular si tenemos achieved_goal (requiere HER activo en agente)
+    if 'achieved_goal' not in tran:
+      print("No hubo transition!")
+      return
+
+    buf = episode_buffers[worker]
+
+    if tran['is_first']:
+      buf.clear()
+
+    buf.append({k: v.copy() if isinstance(v, np.ndarray) else v
+                for k, v in tran.items()})
+
+    if not tran['is_last']:
+      return
+
+    # ── Fin del episodio: relabelar según paper ───────────────────────────
+    T = len(buf)
+    replay_space = set(agent.spaces.keys())
+
+    for t in range(T):
+      for _ in range(her_k):
+
+        # Samplear t' según estrategia
+        if her_strategy == 'future':
+          t_prime = int(her_rng.integers(t, T))
+        elif her_strategy == 'final':
+          t_prime = T - 1
+        elif her_strategy == 'random_ep':
+          t_prime = int(her_rng.integers(T))
+        else:
+          raise ValueError(her_strategy)
+
+        achieved = buf[t_prime]['achieved_goal']  # (stoch_rows,)
+
+        # Construir goal double one-hot
+        g_prime, row_idx, class_val = _make_her_goal(
+            achieved, her_stoch_rows, her_stoch_classes, her_rng)
+
+        # Relabelar reward: 1 si el estado t alcanzó el goal
+        reached = _her_reached(buf[t]['achieved_goal'], row_idx, class_val)
+
+        her_tran = dict(buf[t])
+        her_tran['goal']   = g_prime
+        her_tran['reward'] = np.float32(1.0 if reached else 0.0)
+
+        filtered = {k: v for k, v in her_tran.items() if k in replay_space}
+        replay.add(filtered)
+
+    episode_buffers[worker].clear()
+
   fns = [bind(make_env, i) for i in range(args.envs)]
   driver = embodied.Driver(fns, parallel=not args.debug)
   driver.on_step(lambda tran, _: step.increment())
@@ -83,11 +168,12 @@ def train(make_agent, make_replay, make_env, make_stream, make_logger, args):
   driver.on_step(lambda tran, _: filtered_replay(replay, agent.spaces.keys(), tran))
   driver.on_step(logfn)
   driver.on_step(lambda tran, worker: heatmap.increase(tran, worker))
+  driver.on_step(her_replay_fn)
 
   stream_train = iter(agent.stream(make_stream(replay, 'train')))
   stream_report = iter(agent.stream(make_stream(replay, 'report')))
 
-  carry_train = [agent.init_train(her_batch_size)]
+  carry_train = [agent.init_train(args.batch_size)]
   carry_report = agent.init_report(args.batch_size)
 
   def trainfn(tran, worker):
