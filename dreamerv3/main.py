@@ -67,7 +67,8 @@ def main(argv=None):
   )
   if config.her.enabled:
     args = args.update(batch_size=config.batch_size * (1 + config.her.k))
-
+  print('batch_size en args:', args.batch_size)
+  
   if config.script == 'train':
     embodied.run.train(
         bind(make_agent, config),
