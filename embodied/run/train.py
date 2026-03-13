@@ -69,8 +69,8 @@ def train(make_agent, make_replay, make_env, make_stream, make_logger, args):
   if her_enabled:
     her_k           = args.her.k
     her_strategy    = args.her.strategy
-    her_stoch_rows  = args.her.stoch_rows
-    her_stoch_classes = args.her.stoch_classes
+    her_stoch_rows  = args.agent.dyn.rsmm.stoch
+    her_stoch_classes = args.agent.dyn.rssm.classes
     her_rng         = np.random.default_rng()
     episode_buffers = defaultdict(list)
     
