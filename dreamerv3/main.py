@@ -66,8 +66,11 @@ def main(argv=None):
       replay_context=config.replay_context,
   )
   if config.her.enabled:
-    args = args.update(batch_size=config.batch_size * (1 + config.her.k))
+    her_batch = config.batch_size * (1 + config.her.k)
+    config = config.update({'batch_size': her_batch})
+    args = args.update(batch_size=her_batch)
   print('batch_size en args:', args.batch_size)
+  print('batch_size en config:', config.batch_size)
   
   if config.script == 'train':
     embodied.run.train(
