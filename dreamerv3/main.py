@@ -55,8 +55,8 @@ def main(argv=None):
   args = elements.Config(
       **config.run,
       her=config.her,
-      dyn_stoch=config.agent.dyn.stoch,
-      dyn_classes=config.agent.dyn.classes,
+      dyn_stoch=config.agent.dyn.rssm.stoch,
+      dyn_classes=config.agent.dyn.rssm.classes,
       replica=config.replica,
       replicas=config.replicas,
       logdir=config.logdir,
