@@ -65,6 +65,8 @@ def main(argv=None):
       consec_report=config.consec_report,
       replay_context=config.replay_context,
   )
+  if config.her.enabled:
+    args = args.update(batch_size=config.batch_size * (1 + config.her.k))
 
   if config.script == 'train':
     embodied.run.train(

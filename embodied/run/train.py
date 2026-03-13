@@ -40,9 +40,7 @@ def train(make_agent, make_replay, make_env, make_stream, make_logger, args):
   
   heatmap = Heatmap()
   
-  her_factor = (1 + args.her.k) if getattr(args.her, 'enabled', False) else 1
-  her_batch_size = args.batch_size * her_factor
-  batch_steps = her_batch_size * args.batch_length
+  batch_steps = args.batch_size * args.batch_length
   should_train = elements.when.Ratio(args.train_ratio / batch_steps)
   should_log = embodied.LocalClock(args.log_every)
   should_report = embodied.LocalClock(args.report_every)
@@ -88,7 +86,7 @@ def train(make_agent, make_replay, make_env, make_stream, make_logger, args):
   stream_train = iter(agent.stream(make_stream(replay, 'train')))
   stream_report = iter(agent.stream(make_stream(replay, 'report')))
 
-  carry_train = [agent.init_train(her_batch_size)]
+  carry_train = [agent.init_train(args.batch_size)]
   carry_report = agent.init_report(args.batch_size)
 
   def trainfn(tran, worker):
