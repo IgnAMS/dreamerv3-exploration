@@ -68,6 +68,27 @@ class Driver:
     obs = {k: v for k, v in obs.items() if not k.startswith('log/')}
     assert all(len(x) == self.length for x in obs.values()), obs
     self.carry, acts, outs = policy(self.carry, obs, **self.kwargs)
+    
+    if 'achieved_goal' in outs and 'goal' in obs:
+        goal = obs['goal']
+        achieved  = outs['achieved_goal']
+        stoch_rows = achieved.shape[1]
+        row_idx   = goal[:, :stoch_rows].argmax(axis=1)
+        class_val = goal[:, stoch_rows:].argmax(axis=1)
+
+        # 1 si se logro y 0 en caso contrario
+        reached = np.array([
+            int(achieved[i, row_idx[i]]) == int(class_val[i])
+            for i in range(self.length)
+        ], dtype=bool)
+
+        # Parchear reward: 0 si logró, -1 si no
+        obs['reward'] = np.where(reached, 0.0, -1.0).astype(np.float32)
+
+        # Terminar episodio si logró el goal
+        obs['is_last'] = obs['is_last'] | reached
+        obs['is_terminal'] = obs['is_terminal'] | reached
+        
     assert all(k not in acts for k in outs), (
         list(outs.keys()), list(acts.keys()))
     if obs['is_last'].any():

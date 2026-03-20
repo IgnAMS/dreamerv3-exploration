@@ -245,6 +245,7 @@ def make_env(config, index, **overrides):
       'corner': 'embodied.envs.new_minigrid:CornerEnv',
       'corridor': 'embodied.envs.new_minigrid:Corridor',
       'tworooms': 'embodied.envs.new_minigrid:TwoRooms',
+      'hergoal': 'embodied.envs.new_minigrid:HERGoal',
   }[suite]
   if isinstance(ctor, str):
     module, cls = ctor.split(':')
@@ -269,12 +270,14 @@ def wrap_env(env, config):
   for name, space in env.act_space.items():
     if not space.discrete:
       env = embodied.wrappers.ClipAction(env, name)
+  """
   if config.her.enabled:
     env = embodied.wrappers.AddGoalWrapper(
         env,
         stoch_rows=config.agent.dyn.rssm.stoch,
         stoch_classes=config.agent.dyn.rssm.classes,
     )
+  """
   return env
 
 

@@ -37,7 +37,7 @@ def _make_her_goal(achieved, stoch_rows, stoch_classes, rng):
  
  
 def _her_reached(achieved, row_idx, class_val):
-  return int(achieved[row_idx]) == class_val
+  return int(achieved[row_idx]) == class_val - 1 
 
 
 

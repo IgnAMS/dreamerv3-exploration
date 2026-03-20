@@ -267,3 +267,11 @@ tworooms:
 corner:
   task: corner_52x52
   run: {steps: 5e4, envs: 1, train_ratio: 256}
+
+hergoal:
+  task: hergoal_9
+  run: {steps: 1e6, envs: 1, train_ratio: 256}
+  her:
+    enabled: true
+    k: 4
+    strategy: future

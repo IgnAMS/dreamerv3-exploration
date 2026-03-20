@@ -430,13 +430,16 @@ class AddGoalWrapper(Wrapper):
     stoch_classes : número de clases por categoría             (config.agent.classes)
     """
  
-    def __init__(self, env, stoch_rows: int, stoch_classes: int):
+    def __init__(self, env, stoch_rows: int, stoch_classes: int, seed=None):
         super().__init__(env)
         self.env = env
-        self._goal_dim = stoch_rows + stoch_classes
-        self._goal_zeros = np.zeros(self._goal_dim, dtype=np.float32)
-        self._goal_space = elements.Space(np.float32, (self._goal_dim,))
- 
+        self._stoch_rows    = stoch_rows
+        self._stoch_classes = stoch_classes
+        self._goal_dim      = stoch_rows + stoch_classes
+        self._rng           = np.random.default_rng(seed)
+        self._goal_space    = elements.Space(np.float32, (self._goal_dim,))
+        self._current_goal  = np.zeros(self._goal_dim, dtype=np.float32)
+        
     def __len__(self):
         return len(self.env)
  
@@ -460,10 +463,26 @@ class AddGoalWrapper(Wrapper):
     @property
     def act_space(self):
         return self.env.act_space
+    
+    def _sample_goal(self):
+        """
+        Samplea un goal double one-hot aleatorio:
+            onehot(row_idx, stoch_rows) ⊕ onehot(class_val, stoch_classes)
+        donde row_idx ~ U(0, stoch_rows) y class_val ~ U(0, stoch_classes).
+        """
+        row_idx   = int(self._rng.integers(self._stoch_rows))
+        class_val = int(self._rng.integers(self._stoch_classes))
+        row_oh  = np.zeros(self._stoch_rows,    dtype=np.float32)
+        cls_oh  = np.zeros(self._stoch_classes, dtype=np.float32)
+        row_oh[row_idx]   = 1.0
+        cls_oh[class_val] = 1.0
+        return np.concatenate([row_oh, cls_oh])
  
     def step(self, action):
         obs = self.env.step(action)
-        obs['goal'] = self._goal_zeros.copy() # Relabel en stream
+        if obs.get('is_first', False):
+            self._current_goal = self._sample_goal()
+        obs['goal'] = self._current_goal.copy()
         return obs
  
     def close(self):
