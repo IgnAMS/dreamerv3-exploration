@@ -37,7 +37,7 @@ def _make_her_goal(achieved, stoch_rows, stoch_classes, rng):
  
  
 def _her_reached(achieved, row_idx, class_val):
-  return int(achieved[row_idx]) == class_val - 1 
+  return int(achieved[row_idx]) == class_val
 
 
 
@@ -150,7 +150,7 @@ def train(make_agent, make_replay, make_env, make_stream, make_logger, args):
 
         her_tran = dict(buf[t])
         her_tran['goal']   = g_prime
-        her_tran['reward'] = np.float32(1.0 if reached else 0.0)
+        her_tran['reward'] = np.float32(0.0 if reached else -1.0)
 
         filtered = {k: v for k, v in her_tran.items() if k in replay_space}
         replay.add(filtered)
