@@ -29,7 +29,8 @@ from embodied.envs.new_minigrid import (
     CookiePedroFull,
     CookiePedroFullFixed,
     Corridor,
-    TwoRooms
+    TwoRooms,
+    HERGoal
 )
 
 # key->action mapping (MiniGrid classic)
@@ -113,9 +114,16 @@ def main():
         tile_size=TILE_SIZE,
         render_mode=RENDER_MODE,
     )
-    """
     env = TwoRooms(
         task="18x29",
+        size=PIXEL_SIZE,
+        resize='pillow',
+        tile_size=TILE_SIZE,
+        render_mode=RENDER_MODE,
+    ) 
+    """
+    env = HERGoal(
+        task="9",
         size=PIXEL_SIZE,
         resize='pillow',
         tile_size=TILE_SIZE,
