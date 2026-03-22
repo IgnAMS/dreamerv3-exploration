@@ -151,7 +151,11 @@ def train(make_agent, make_replay, make_env, make_stream, make_logger, args):
         her_tran = dict(buf[t])
         her_tran['goal']   = g_prime
         her_tran['reward'] = np.float32(0.0 if reached else -1.0)
-
+        
+        # TODO: Deberia tener esto?
+        if reached:
+            her_tran['is_last']     = np.bool_(True)
+            her_tran['is_terminal'] = np.bool_(True)
         filtered = {k: v for k, v in her_tran.items() if k in replay_space}
         replay.add(filtered)
 
