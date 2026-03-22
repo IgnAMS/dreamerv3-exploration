@@ -382,7 +382,6 @@ def natsort(sequence):
 
 
 def natfmt(x):
-
   if abs(x) < 1e3:
     x, suffix = x, ''
   elif 1e3 <= abs(x) < 1e6:
