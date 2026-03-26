@@ -77,7 +77,10 @@ class Driver:
     
     # NANO: NUEVO
     # infos
-    raw_info = [env.info for env in self.envs]
+    if not self.parallel:
+        raw_info = [env.info for env in self.envs]
+    else:
+        raw_info = [dict()]
     keys_info = raw_info[0].keys() if raw_info else []
     infos = {k: [] for k in keys_info}
     for k in keys_info:

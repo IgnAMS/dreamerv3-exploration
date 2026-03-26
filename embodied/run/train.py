@@ -23,66 +23,43 @@ def filtered_replay(replay, space, tran):
 
 class LatentHERCallback:
     def __init__(self, replay, space, reward_fn, k=4, strategy='future'):
-        """
-        :param replay: Instancia de replay buffer de Dreamer.
-        :param space: Claves (keys) permitidas del observation space.
-        :param reward_fn: Función r(estado, meta) -> float
-        :param k: Número de episodios relabelados a generar por cada original.
-        :param strategy: Estrategia de muestreo de metas ('future', 'final', 'episode').
-        """
         self.replay = replay
         self.space = space
         self.reward_fn = reward_fn
         self.k = k
         self.strategy = strategy
-        self.success_stoch = None
-        
-        # Diccionario para guardar el episodio en curso por cada worker paralelo
         self.episodes = collections.defaultdict(list)
 
     def _copy_transition(self, tran):
-        new_tran = {}
-        for k, v in tran.items():
-            if isinstance(v, np.ndarray):
-                new_tran[k] = v.copy()
-            else:
-                new_tran[k] = v
-        return new_tran
+        return {k: v.copy() if isinstance(v, np.ndarray) else v
+                for k, v in tran.items()}
 
     def __call__(self, tran, worker):
         self.episodes[worker].append(tran)
         filtered = {k: v for k, v in tran.items() if k in self.space}
-        if self.success_stoch is not None:
-            filtered['her_goal'] = self.success_stoch.copy()
-            # filtered['reward'] = np.array(self.reward_fn(tran['dyn/stoch'], self.success_stoch), np.float32)
         self.replay.add(filtered)
 
-        # Si el episodio terminó, generamos los episodios HER
         if tran['is_last']:
-            episode = self.episodes[worker]
-            self.episodes[worker] = []  # Reseteamos el buffer para ese worker
+            episode = self.episodes.pop(worker)
             self._generate_her_episodes(episode)
 
     def _generate_her_episodes(self, episode):
-        success_indices = [i for i, t in enumerate(episode) if t['reward'] > 0.5]
-        if success_indices:
-            self.success_stoch = episode[success_indices[0]]['dyn/stoch'].copy()
         ep_len = len(episode)
         for _ in range(self.k):
             for t, tran in enumerate(episode):
                 new_tran = self._copy_transition(tran)
+
                 if self.strategy == 'future':
                     goal_idx = np.random.randint(t, ep_len)
                 elif self.strategy == 'final':
                     goal_idx = ep_len - 1
                 else:
                     goal_idx = np.random.randint(0, ep_len)
-                    
+
                 goal_stoch = episode[goal_idx]['dyn/stoch']
                 new_tran['her_goal'] = goal_stoch
-
-                # Recalcular la recompensa
-                new_tran['reward'] = self.reward_fn(new_tran['dyn/stoch'], goal_stoch)
+                new_tran['reward'] = np.float32(
+                    self.reward_fn(tran['dyn/stoch'], goal_stoch))
 
                 filtered = {k: v for k, v in new_tran.items() if k in self.space}
                 self.replay.add(filtered)
@@ -148,7 +125,7 @@ def train(make_agent, make_replay, make_env, make_stream, make_logger, args):
   driver.on_step(lambda tran, _: step.increment())
   driver.on_step(lambda tran, _: policy_fps.step())
   if args.use_HER:
-    reward_fn = lambda goal, stoch: 1.0 if np.linalg.norm(goal - stoch) < 0.2 else 0.0
+    reward_fn = lambda goal, stoch: 0.0 if np.linalg.norm(goal - stoch) < 0.2 else -1.0
     her_callback = LatentHERCallback(replay, space=agent.spaces.keys(), reward_fn=reward_fn)
     driver.on_step(her_callback)
   else:

@@ -228,6 +228,9 @@ class Agent(embodied.jax.Agent):
         # obs['her_goal'][:, -K:] tiene forma (B, K, (32, 16) o (32, 64) automáticamente)
         g_raw = obs['her_goal'][:, -K:]
         g = g_raw.reshape((B * K, *g_raw.shape[2:]))
+        assert g.shape == (B * K, *obs['her_goal'].shape[2:]), (
+            f"Goal reshape incorrecto: got {g.shape}, "
+            f"expected {(B * K, *obs['her_goal'].shape[2:])}")
         return sample(self.pol(self.feat2tensor(feat, g), 1))
       else:
         return sample(self.pol(self.feat2tensor(feat), 1))
@@ -271,11 +274,14 @@ class Agent(embodied.jax.Agent):
       feat = sg(repfeat, skip=self.config.repval_grad)
       last, term, rew = [obs[k] for k in ('is_last', 'is_terminal', 'reward')]
       boot = imgloss_out['ret'][:, 0].reshape(B, K)
-      feat, last, term, rew, boot, goal = jax.tree.map(
-          lambda x: x[:, -K:], (feat, last, term, rew, boot, obs.get("her_goal", None)))
       if self.config.use_HER:
+          feat, last, term, rew, boot, goal = jax.tree.map(
+              lambda x: x[:, -K:], (feat, last, term, rew, boot, obs['her_goal']))
           inp = self.feat2tensor(feat, goal)
       else:
+          feat, last, term, rew, boot = jax.tree.map(
+              lambda x: x[:, -K:], (feat, last, term, rew, boot))
+          goal = None
           inp = self.feat2tensor(feat)
       los, reploss_out, mets = repl_loss(
           last, term, rew, boot,
