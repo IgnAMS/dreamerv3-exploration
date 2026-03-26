@@ -436,12 +436,12 @@ class GoalConditionedWrapper(Wrapper):
 
     @property
     def obs_space(self):
-        spaces = self._env.obs_space.copy()
+        spaces = self.env.obs_space.copy()
         spaces['her_goal'] = elements.Space(self._goal_dtype, self._goal_shape)
         return spaces
 
     def step(self, action):
-        obs = self._env.step(action)
+        obs = self.env.step(action)
         if obs.get('is_first', False):
             self._current_goal = self._sample_goal()
         obs['her_goal'] = self._current_goal.copy()
