@@ -54,7 +54,7 @@ def main(argv=None):
 
   args = elements.Config(
       **config.run,
-      use_HER=config.use_HER,
+      her=config.her,
       replica=config.replica,
       replicas=config.replicas,
       logdir=config.logdir,
@@ -138,7 +138,7 @@ def make_agent(config):
   cpdir = cpdir.parent if config.replicas > 1 else cpdir
   return Agent(obs_space, act_space, elements.Config(
       **config.agent,
-      use_HER=config.use_HER,
+      her=config.her,
       logdir=config.logdir,
       seed=config.seed,
       jax=config.jax,
@@ -242,6 +242,7 @@ def make_env(config, index, **overrides):
       'cookiepedrofullfixed': 'embodied.envs.new_minigrid:CookiePedroFullFixed',
       'corridor': 'embodied.envs.new_minigrid:Corridor',
       'tworooms': 'embodied.envs.new_minigrid:TwoRooms',
+      'hergoal': 'embodied.envs.new_minigrid:HERGoal',
   }[suite]
   if isinstance(ctor, str):
     module, cls = ctor.split(':')
@@ -258,7 +259,7 @@ def make_env(config, index, **overrides):
 
 
 def wrap_env(env, config):
-  if config.use_HER:
+  if config.her.enabled:
     goal_shape = (config.agent.dyn.rssm.stoch, config.agent.dyn.rssm.classes)
     env = embodied.wrappers.GoalConditionedWrapper(env, goal_shape=goal_shape, goal_dtype=np.float32)
   

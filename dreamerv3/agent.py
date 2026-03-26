@@ -51,7 +51,7 @@ class Agent(embodied.jax.Agent):
         'simple': rssm.Decoder,
     }[config.dec.typ](dec_space, **config.dec[config.dec.typ], name='dec')
 
-    if self.config.use_HER:
+    if self.config.her.enabled:
       self.feat2tensor = lambda x, g: jnp.concatenate([
           nn.cast(x['deter']),
           nn.cast(x['stoch'].reshape((*x['stoch'].shape[:-2], -1))),
@@ -144,7 +144,7 @@ class Agent(embodied.jax.Agent):
       dec_carry, dec_entry, recons = self.dec(dec_carry, feat, reset, **kw)
     
     
-    if self.config.use_HER:
+    if self.config.her.enabled:
       tensor_feat = self.feat2tensor(feat, obs['her_goal']) 
     else:
       tensor_feat = self.feat2tensor(feat)
@@ -197,7 +197,7 @@ class Agent(embodied.jax.Agent):
     dec_carry, dec_entries, recons = self.dec(
         dec_carry, repfeat, reset, training)
     
-    if self.config.use_HER:
+    if self.config.her.enabled:
         inp = sg(self.feat2tensor(repfeat, obs['her_goal']), skip=self.config.reward_grad)
     else:
         inp = sg(self.feat2tensor(repfeat), skip=self.config.reward_grad)
@@ -223,7 +223,7 @@ class Agent(embodied.jax.Agent):
     starts = self.dyn.starts(dyn_entries, dyn_carry, K) 
     
     def policyfn(feat):
-      if self.config.use_HER:
+      if self.config.her.enabled:
         # Durante el sueño, usamos el goal que inició la trayectoria
         # obs['her_goal'][:, -K:] tiene forma (B, K, (32, 16) o (32, 64) automáticamente)
         g_raw = obs['her_goal'][:, -K:]
@@ -245,7 +245,7 @@ class Agent(embodied.jax.Agent):
     assert all(x.shape[:2] == (B * K, H + 1) for x in jax.tree.leaves(imgfeat))
     assert all(x.shape[:2] == (B * K, H + 1) for x in jax.tree.leaves(imgact))
     
-    if self.config.use_HER:
+    if self.config.her.enabled:
         img_goals = sg(obs['her_goal'][:, -K:]) 
         img_goals = jnp.repeat(img_goals[:, :, None, :], H + 1, axis=2)
         stoch_dims = img_goals.shape[3:]
@@ -274,7 +274,7 @@ class Agent(embodied.jax.Agent):
       feat = sg(repfeat, skip=self.config.repval_grad)
       last, term, rew = [obs[k] for k in ('is_last', 'is_terminal', 'reward')]
       boot = imgloss_out['ret'][:, 0].reshape(B, K)
-      if self.config.use_HER:
+      if self.config.her.enabled:
           feat, last, term, rew, boot, goal = jax.tree.map(
               lambda x: x[:, -K:], (feat, last, term, rew, boot, obs['her_goal']))
           inp = self.feat2tensor(feat, goal)

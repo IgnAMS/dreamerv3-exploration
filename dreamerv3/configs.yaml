@@ -18,7 +18,11 @@ defaults:
   clock_port: ''
   ipv6: False
   errfile: False
-  use_HER: False
+  
+  her:
+    enabled: False
+    strategy: future
+    k: 4
 
 
   logger:
@@ -260,3 +264,12 @@ corridor:
 tworooms:
   task: tworooms_18x29
   run: {steps: 5e4, envs: 1, train_ratio: 256}
+
+
+hergoal:
+  task: hergoal_9
+  run: {steps: 1e6, envs: 1, train_ratio: 256}
+  her:
+    enabled: true
+    k: 4
+    strategy: future

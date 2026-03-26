@@ -124,9 +124,15 @@ def train(make_agent, make_replay, make_env, make_stream, make_logger, args):
   driver = embodied.Driver(fns, parallel=not args.debug)
   driver.on_step(lambda tran, _: step.increment())
   driver.on_step(lambda tran, _: policy_fps.step())
-  if args.use_HER:
+  if args.her.enabled:
     reward_fn = lambda goal, stoch: 0.0 if np.linalg.norm(goal - stoch) < 0.2 else -1.0
-    her_callback = LatentHERCallback(replay, space=agent.spaces.keys(), reward_fn=reward_fn)
+    her_callback = LatentHERCallback(
+      replay,
+        space=agent.spaces.keys(),
+        reward_fn=reward_fn,
+        k=args.her.k,
+        strategy=args.her.strategy,
+    )
     driver.on_step(her_callback)
   else:
     driver.on_step(lambda tran, _: filtered_replay(replay, agent.spaces.keys(), tran))

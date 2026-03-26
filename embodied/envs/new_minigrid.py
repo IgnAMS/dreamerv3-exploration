@@ -529,3 +529,15 @@ class TwoRooms(SimpleImageEnv):
             cookie_spawner=deterministic_corner,
             **kwargs,
         )
+        
+
+class HERGoal(SimpleImageEnv):
+    def __init__(self, task=None, **kwargs):
+        from cookie_env.envs import HEREnv
+        super().__init__(
+            task=task,
+            make_env=HEREnv,
+            full_obs=True,
+            rgb_img_obs='full',
+            **kwargs,
+        )
