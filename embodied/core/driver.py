@@ -84,8 +84,8 @@ class Driver:
         reached = (achieved_class == target_class)
 
         obs['reward'] = np.where(reached, 0.0, -1.0).astype(np.float32)
-        obs['is_last'] = obs['is_last'] | reached
-        obs['is_terminal'] = obs['is_terminal'] | reached
+        # obs['is_last'] = obs['is_last'] | reached
+        # obs['is_terminal'] = obs['is_terminal'] | reached
     
     assert all(k not in acts for k in outs), (
         list(outs.keys()), list(acts.keys()))
