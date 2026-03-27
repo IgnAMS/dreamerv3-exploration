@@ -70,8 +70,6 @@ class Driver:
     self.carry, acts, outs = policy(self.carry, obs, **self.kwargs)
     
     if 'dyn/stoch' in outs and 'her_goal' in obs:
-        print("entre aca xd")
-        print(outs.keys())
         # her_goal: (Batch, 48) | stoch: (Batch, 32, 16)
         goal = obs['her_goal']
         stoch = outs['dyn/stoch']
@@ -84,12 +82,10 @@ class Driver:
         ])
 
         reached = (achieved_class == target_class)
-        print(achieved_class, target_class)
 
         obs['reward'] = np.where(reached, 0.0, -1.0).astype(np.float32)
         obs['is_last'] = obs['is_last'] | reached
-        if 'is_terminal' in obs:
-            obs['is_terminal'] = obs['is_terminal'] | reached
+        obs['is_terminal'] = obs['is_terminal'] | reached
     
     assert all(k not in acts for k in outs), (
         list(outs.keys()), list(acts.keys()))
