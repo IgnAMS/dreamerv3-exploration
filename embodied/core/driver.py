@@ -71,12 +71,13 @@ class Driver:
     
     if 'achieved_goal' in outs and 'goal' in obs:
         goal = obs['goal']
-        achieved  = outs['achieved_goal']
+        achieved  = outs['achieved_goal'] # [length, rows] = columna con el valor de 1 
         stoch_rows = achieved.shape[1]
         row_idx   = goal[:, :stoch_rows].argmax(axis=1)
         class_val = goal[:, stoch_rows:].argmax(axis=1)
 
         # 1 si se logro y 0 en caso contrario
+        # TODO: hacer varios prints para corroborar que funcione bien :)
         reached = np.array([
             int(achieved[i, row_idx[i]]) == int(class_val[i])
             for i in range(self.length)
