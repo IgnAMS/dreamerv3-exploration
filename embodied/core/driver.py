@@ -68,7 +68,7 @@ class Driver:
     obs = {k: v for k, v in obs.items() if not k.startswith('log/')}
     assert all(len(x) == self.length for x in obs.values()), obs
     self.carry, acts, outs = policy(self.carry, obs, **self.kwargs)
-    
+    print(outs.keys())
     if 'achieved_goal' in outs and 'goal' in obs:
         goal = obs['goal']
         achieved  = outs['achieved_goal'] # [length, rows] = columna con el valor de 1 
