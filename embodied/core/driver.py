@@ -75,13 +75,19 @@ class Driver:
         stoch_rows = achieved.shape[1]
         row_idx   = goal[:, :stoch_rows].argmax(axis=1)
         class_val = goal[:, stoch_rows:].argmax(axis=1)
-
+        print("\n" + "="*40)
+        print("DEBUG LATENT HER (Driver)")
+        print(f"Goal Vector (48,): {goal[0]}")
+        print(f"Buscando Row: {row_idx[0]} | Clase Objetivo: {class_val[0]}")
+        print(f"Achieved (32 argmaxes): {achieved[0]}")
+        print(f"Clase actual en Row {row_idx[0]}: {achieved[0, row_idx[0]]}")
+        
         # 1 si se logro y 0 en caso contrario
         # TODO: hacer varios prints para corroborar que funcione bien :)
         reached = np.array([
             int(achieved[i, row_idx[i]]) == int(class_val[i])
             for i in range(self.length)
-        ], dtype=bool)
+        ], dtype=bool) 
 
         # Parchear reward: 0 si logró, -1 si no
         obs['reward'] = np.where(reached, 0.0, -1.0).astype(np.float32)
