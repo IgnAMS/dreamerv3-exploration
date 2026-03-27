@@ -69,10 +69,12 @@ class Driver:
     assert all(len(x) == self.length for x in obs.values()), obs
     self.carry, acts, outs = policy(self.carry, obs, **self.kwargs)
     
-    if 'stoch' in outs and 'her_goal' in obs:
+    if 'dyn/stoch' in outs and 'her_goal' in obs:
+        print("entre aca xd")
+        print(outs.keys())
         # her_goal: (Batch, 48) | stoch: (Batch, 32, 16)
         goal = obs['her_goal']
-        stoch = outs['stoch']
+        stoch = outs['dyn/stoch']
         batch_size, stoch_rows, num_classes = stoch.shape
 
         row_idx = goal[:, :stoch_rows].argmax(axis=1)
@@ -82,6 +84,7 @@ class Driver:
         ])
 
         reached = (achieved_class == target_class)
+        print(achieved_class, target_class)
 
         obs['reward'] = np.where(reached, 0.0, -1.0).astype(np.float32)
         obs['is_last'] = obs['is_last'] | reached
