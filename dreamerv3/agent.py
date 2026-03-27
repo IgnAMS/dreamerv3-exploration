@@ -146,8 +146,6 @@ class Agent(embodied.jax.Agent):
       # HER: guardar achieved_goal = argmax del stoch por cada fila
       # feat['stoch'] shape: (B, stoch_rows, stoch_classes)
       out['achieved_goal'] = feat['stoch'].argmax(-1).astype(jnp.int32)
-      # jax.debug.print("\n\n--- AGENT LATENT STATE ---")
-      # jax.debug.print("Matriz stoch (32, 16) argmax: {x}", x=out['achieved_goal'][0])
       
     
     carry = (enc_carry, dyn_carry, dec_carry, act)

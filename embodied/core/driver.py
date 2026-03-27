@@ -68,20 +68,21 @@ class Driver:
     obs = {k: v for k, v in obs.items() if not k.startswith('log/')}
     assert all(len(x) == self.length for x in obs.values()), obs
     self.carry, acts, outs = policy(self.carry, obs, **self.kwargs)
-    print(outs.keys())
     if 'achieved_goal' in outs and 'goal' in obs:
         goal = obs['goal']
         achieved  = outs['achieved_goal'] # [length, rows] = columna con el valor de 1 
         stoch_rows = achieved.shape[1]
         row_idx   = goal[:, :stoch_rows].argmax(axis=1)
         class_val = goal[:, stoch_rows:].argmax(axis=1)
-        print("\n" + "="*40)
-        print("DEBUG LATENT HER (Driver)")
-        print(f"Goal Vector (48,): {goal[0]}")
-        print(f"Buscando Row: {row_idx[0]} | Clase Objetivo: {class_val[0]}")
-        print(f"Achieved (32 argmaxes): {achieved[0]}")
-        print(f"Clase actual en Row {row_idx[0]}: {achieved[0, row_idx[0]]}")
-        print(f"dyn/stoch:", outs["dyn/stoch"][0])
+        
+        # print("\n" + "="*40)
+        # print("DEBUG LATENT HER (Driver)")
+        # print(f"Goal Vector (48,): {goal[0]}")
+        # print(f"Buscando Row: {row_idx[0]} | Clase Objetivo: {class_val[0]}")
+        # print(f"Achieved (32 argmaxes): {achieved[0]}")
+        # print(f"Clase actual en Row {row_idx[0]}: {achieved[0, row_idx[0]]}")
+        # print(f"dyn/stoch:", outs["dyn/stoch"][0])
+        
         # 1 si se logro y 0 en caso contrario
         # TODO: hacer varios prints para corroborar que funcione bien :)
         reached = np.array([
@@ -116,7 +117,7 @@ class Driver:
       except Exception:
         infos[k] = np.array(vals, dtype=object)
     trans = {**obs, **acts, **outs, **logs, **infos}
-    # print(infos)
+    
     for i in range(self.length):
       trn = elements.tree.map(lambda x: x[i], trans)
       [fn(trn, i, **self.kwargs) for fn in self.callbacks]
