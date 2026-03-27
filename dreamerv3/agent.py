@@ -38,7 +38,7 @@ class Agent(embodied.jax.Agent):
     print("config:", self.config)
 
     # No anado el goal en los estado
-    exclude = ('is_first', 'is_last', 'is_terminal', 'reward', 'her_goal')
+    exclude = ('is_first', 'is_last', 'is_terminal', 'reward', 'her_goal', 'goal')
     enc_space = {k: v for k, v in obs_space.items() if k not in exclude}
     dec_space = {k: v for k, v in obs_space.items() if k not in exclude}
     self.enc = {
@@ -55,7 +55,8 @@ class Agent(embodied.jax.Agent):
       self.feat2tensor = lambda x, g: jnp.concatenate([
           nn.cast(x['deter']),
           nn.cast(x['stoch'].reshape((*x['stoch'].shape[:-2], -1))),
-          nn.cast(g.reshape((*g.shape[:-2], -1)))
+          # nn.cast(g.reshape((*g.shape[:-2], -1)))
+          nn.cast(g)
       ], -1)
     else:
       self.feat2tensor = lambda x: jnp.concatenate([

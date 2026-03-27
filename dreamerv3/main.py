@@ -260,7 +260,8 @@ def make_env(config, index, **overrides):
 
 def wrap_env(env, config):
   if config.her.enabled:
-    goal_shape = (config.agent.dyn.rssm.stoch, config.agent.dyn.rssm.classes)
+    # goal_shape = (config.agent.dyn.rssm.stoch, config.agent.dyn.rssm.classes)
+    goal_shape = (config.agent.dyn.rssm.stoch, config.agent.dyn.rssm.classes,)
     env = embodied.wrappers.GoalConditionedWrapper(env, goal_shape=goal_shape, goal_dtype=np.float32)
   
   for name, space in env.act_space.items():

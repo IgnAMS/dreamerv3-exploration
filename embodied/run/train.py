@@ -23,10 +23,10 @@ def filtered_replay(replay, space, tran):
 
 class LatentHERCallback:
     def __init__(self, replay, space, reward_fn, k=4, strategy='future'):
-        self.replay = replay
-        self.space = space
+        self.replay   = replay
+        self.space    = space
         self.reward_fn = reward_fn
-        self.k = k
+        self.k        = k
         self.strategy = strategy
         self.episodes = collections.defaultdict(list)
 
@@ -34,11 +34,24 @@ class LatentHERCallback:
         return {k: v.copy() if isinstance(v, np.ndarray) else v
                 for k, v in tran.items()}
 
+    def _stoch_to_goal(self, stoch: np.ndarray) -> np.ndarray:
+        """
+        dyn/stoch (stoch_rows, stoch_classes) → double one-hot (stoch_rows + stoch_classes,)
+        Elige una fila al azar y toma el argmax como class_val.
+        """
+        stoch_rows, stoch_classes = stoch.shape
+        row_idx   = np.random.randint(0, stoch_rows)
+        class_val = int(np.argmax(stoch[row_idx]))
+        row_oh = np.zeros(stoch_rows,    dtype=np.float32)
+        cls_oh = np.zeros(stoch_classes, dtype=np.float32)
+        row_oh[row_idx]   = 1.0
+        cls_oh[class_val] = 1.0
+        return np.concatenate([row_oh, cls_oh])
+
     def __call__(self, tran, worker):
         self.episodes[worker].append(tran)
         filtered = {k: v for k, v in tran.items() if k in self.space}
         self.replay.add(filtered)
-
         if tran['is_last']:
             episode = self.episodes.pop(worker)
             self._generate_her_episodes(episode)
@@ -56,10 +69,13 @@ class LatentHERCallback:
                 else:
                     goal_idx = np.random.randint(0, ep_len)
 
-                goal_stoch = episode[goal_idx]['dyn/stoch']
-                new_tran['her_goal'] = goal_stoch
-                new_tran['reward'] = np.float32(
-                    self.reward_fn(tran['dyn/stoch'], goal_stoch))
+                # Convertir el stoch futuro al formato double one-hot del env
+                future_stoch = episode[goal_idx]['dyn/stoch']
+                new_goal = self._stoch_to_goal(future_stoch)
+
+                new_tran['her_goal'] = new_goal
+                new_tran['reward']   = np.float32(
+                    self.reward_fn(tran['dyn/stoch'], new_goal))
 
                 filtered = {k: v for k, v in new_tran.items() if k in self.space}
                 self.replay.add(filtered)
@@ -125,7 +141,14 @@ def train(make_agent, make_replay, make_env, make_stream, make_logger, args):
   driver.on_step(lambda tran, _: step.increment())
   driver.on_step(lambda tran, _: policy_fps.step())
   if args.her.enabled:
-    reward_fn = lambda goal, stoch: 0.0 if np.linalg.norm(goal - stoch) < 0.2 else -1.0
+    stoch_rows = args.agent.dyn.rssm.stoch
+    def reward_fn(stoch: np.ndarray, goal: np.ndarray) -> float:
+        # stoch: (32, 16)   goal: (48,)
+        row_idx       = int(np.argmax(goal[:stoch_rows]))
+        target_class  = int(np.argmax(goal[stoch_rows:]))
+        achieved_class = int(np.argmax(stoch[row_idx]))
+        return 0.0 if achieved_class == target_class else -1.0
+      
     her_callback = LatentHERCallback(
       replay,
         space=agent.spaces.keys(),
