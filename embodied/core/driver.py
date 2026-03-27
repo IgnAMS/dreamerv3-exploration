@@ -81,7 +81,7 @@ class Driver:
         print(f"Buscando Row: {row_idx[0]} | Clase Objetivo: {class_val[0]}")
         print(f"Achieved (32 argmaxes): {achieved[0]}")
         print(f"Clase actual en Row {row_idx[0]}: {achieved[0, row_idx[0]]}")
-        
+        print(f"dyn/stoch:", outs["dyn/stoch"][0])
         # 1 si se logro y 0 en caso contrario
         # TODO: hacer varios prints para corroborar que funcione bien :)
         reached = np.array([
