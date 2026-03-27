@@ -541,5 +541,6 @@ class HERGoal(SimpleImageEnv):
             make_env=HEREnv,
             full_obs=True,
             rgb_img_obs='full',
+            max_steps=1000,
             **kwargs,
         )
