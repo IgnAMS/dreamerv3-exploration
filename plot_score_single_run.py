@@ -1,0 +1,40 @@
+import json
+import numpy as np
+import matplotlib.pyplot as plt
+from pathlib import Path
+
+logdir = Path("~/logdir/dreamer/HER_OBS_hergoal32/size12m/01").expanduser()
+outdir = Path("plots") / f"single_run_HER_OBS_hergoal32_size12m_01"
+outdir.mkdir(parents=True, exist_ok=True)
+
+# Cargar scores.jsonl
+records = []
+for line in (logdir / "scores.jsonl").read_text().strip().split("\n"):
+    try:
+        records.append(json.loads(line))
+    except json.JSONDecodeError:
+        continue
+
+steps  = [r["step"]           for r in records if "step"           in r]
+scores = [r["episode/score"]  for r in records if "episode/score"  in r]
+
+# Binning suave (promedio móvil)
+window = max(1, len(scores) // 30)
+def moving_avg(x, w):
+    return np.convolve(x, np.ones(w)/w, mode='valid')
+
+steps_smooth  = steps[window-1:]
+scores_smooth = moving_avg(scores, window)
+
+# Plot
+fig, ax = plt.subplots(figsize=(8, 4))
+ax.plot(steps, scores, alpha=0.2, color='#0022ff', linewidth=0.8)
+ax.plot(steps_smooth, scores_smooth, color='#0022ff', linewidth=1.8, label='HER_OBS size12m')
+ax.set_xlabel("Steps")
+ax.set_ylabel("Episode score")
+ax.set_title("HER_OBS_hergoal32 k=4 RELABEL / size12m / 01")
+ax.grid(color='#eeeeee')
+ax.legend()
+fig.tight_layout()
+fig.savefig(outdir / "performance.png", dpi=150)
+print("Saved:", outdir / "performance.png")
