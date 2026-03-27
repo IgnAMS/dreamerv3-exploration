@@ -3,7 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from pathlib import Path
 
-logdir = Path("~/logdir/dreamer/HER_POL_hergoal9_k8/size12m/01").expanduser()
+logdir = Path("~/logdir/dreamer/HER_POL_hergoal9_k8/size12m/02").expanduser()
 outdir = Path("plots") / f"single_run_HER_POL_hergoal9_k8_size12m_01"
 outdir.mkdir(parents=True, exist_ok=True)
 
