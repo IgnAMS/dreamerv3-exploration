@@ -141,7 +141,7 @@ def train(make_agent, make_replay, make_env, make_stream, make_logger, args):
   driver.on_step(lambda tran, _: step.increment())
   driver.on_step(lambda tran, _: policy_fps.step())
   if args.her.enabled:
-    stoch_rows = args.agent.dyn.rssm.stoch
+    stoch_rows = args.stoch_size
     def reward_fn(stoch: np.ndarray, goal: np.ndarray) -> float:
         # stoch: (32, 16)   goal: (48,)
         row_idx       = int(np.argmax(goal[:stoch_rows]))
