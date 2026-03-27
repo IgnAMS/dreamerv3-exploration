@@ -15,8 +15,13 @@ for line in (logdir / "scores.jsonl").read_text().strip().split("\n"):
     except json.JSONDecodeError:
         continue
 
-steps  = [r["step"]           for r in records if "step"           in r]
-scores = [r["episode/score"]  for r in records if "episode/score"  in r]
+data = []
+for r in records:
+    if "step" in r and "episode/score" in r:
+        data.append((r["step"], r["episode/score"]))
+
+data.sort(key=lambda x: x[0])
+steps, scores = zip(*data)
 
 # Binning suave (promedio móvil)
 window = max(1, len(scores) // 30)
