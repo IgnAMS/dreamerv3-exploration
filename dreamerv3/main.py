@@ -55,6 +55,7 @@ def main(argv=None):
   args = elements.Config(
       **config.run,
       her=config.her,
+      multigoal_z=config.multigoal_z,
       stoch_size=config.agent.dyn.rssm.stoch,
       replica=config.replica,
       replicas=config.replicas,

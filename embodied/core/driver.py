@@ -71,6 +71,7 @@ class Driver:
     self.carry, acts, outs = policy(self.carry, obs, **self.kwargs)
     
     if self.multigoal:
+        print("entre aca xd")
         # z_goal: (Batch, 48) | stoch: (Batch, 32, 16)
         goal = obs['z_goal']
         stoch = outs['dyn/stoch']
