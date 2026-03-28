@@ -8,10 +8,11 @@ import portal
 
 class Driver:
 
-  def __init__(self, make_env_fns, parallel=True, **kwargs):
+  def __init__(self, make_env_fns, parallel=True, multigoal=False, **kwargs):
     assert len(make_env_fns) >= 1
     self.parallel = parallel
     self.kwargs = kwargs
+    self.multigoal = multigoal
     self.length = len(make_env_fns)
     if parallel:
       import multiprocessing as mp
@@ -69,9 +70,9 @@ class Driver:
     assert all(len(x) == self.length for x in obs.values()), obs
     self.carry, acts, outs = policy(self.carry, obs, **self.kwargs)
     
-    if 'dyn/stoch' in outs and 'her_goal' in obs:
-        # her_goal: (Batch, 48) | stoch: (Batch, 32, 16)
-        goal = obs['her_goal']
+    if self.multigoal:
+        # z_goal: (Batch, 48) | stoch: (Batch, 32, 16)
+        goal = obs['z_goal']
         stoch = outs['dyn/stoch']
         batch_size, stoch_rows, num_classes = stoch.shape
 

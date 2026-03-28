@@ -24,6 +24,7 @@ defaults:
     strategy: future
     k: 4
 
+  multigoal_z: False
 
   logger:
     outputs: [jsonl, scope]
@@ -269,6 +270,7 @@ tworooms:
 multigoal:
   task: multigoal_9
   run: {steps: 1e6, envs: 1, train_ratio: 256}
+  multigoal_z: true
   her:
     enabled: true
     k: 4

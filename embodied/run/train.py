@@ -73,7 +73,7 @@ class LatentHERCallback:
                 future_stoch = episode[goal_idx]['dyn/stoch']
                 new_goal = self._stoch_to_goal(future_stoch)
 
-                new_tran['her_goal'] = new_goal
+                new_tran['z_goal'] = new_goal
                 new_tran['reward']   = np.float32(
                     self.reward_fn(tran['dyn/stoch'], new_goal))
 

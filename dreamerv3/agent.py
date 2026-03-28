@@ -38,7 +38,7 @@ class Agent(embodied.jax.Agent):
     print("config:", self.config)
 
     # No anado el goal en los estado
-    exclude = ('is_first', 'is_last', 'is_terminal', 'reward', 'her_goal', 'goal')
+    exclude = ('is_first', 'is_last', 'is_terminal', 'reward', 'z_goal', 'goal')
     enc_space = {k: v for k, v in obs_space.items() if k not in exclude}
     dec_space = {k: v for k, v in obs_space.items() if k not in exclude}
     self.enc = {
@@ -51,7 +51,7 @@ class Agent(embodied.jax.Agent):
         'simple': rssm.Decoder,
     }[config.dec.typ](dec_space, **config.dec[config.dec.typ], name='dec')
 
-    if self.config.her.enabled:
+    if self.config.multigoal_z:
       self.feat2tensor = lambda x, g: jnp.concatenate([
           nn.cast(x['deter']),
           nn.cast(x['stoch'].reshape((*x['stoch'].shape[:-2], -1))),
@@ -66,8 +66,7 @@ class Agent(embodied.jax.Agent):
 
     scalar = elements.Space(np.float32, ())
     binary = elements.Space(bool, (), 0, 2)
-    self.rew = embodied.jax.MLPHead(scalar, **config.rewhead, name='rew')
-    self.con = embodied.jax.MLPHead(binary, **config.conhead, name='con')
+    
 
     d1, d2 = config.policy_dist_disc, config.policy_dist_cont
     outs = {k: d1 if v.discrete else d2 for k, v in act_space.items()}
@@ -83,8 +82,12 @@ class Agent(embodied.jax.Agent):
     self.valnorm = embodied.jax.Normalize(**config.valnorm, name='valnorm')
     self.advnorm = embodied.jax.Normalize(**config.advnorm, name='advnorm')
 
-    self.modules = [
-        self.dyn, self.enc, self.dec, self.rew, self.con, self.pol, self.val]
+    if not self.config.multigoal_z:
+        self.rew = embodied.jax.MLPHead(scalar, **config.rewhead, name='rew')
+        self.con = embodied.jax.MLPHead(binary, **config.conhead, name='con')
+        self.modules = [self.dyn, self.enc, self.dec, self.rew, self.con, self.pol, self.val]
+    else:
+        self.modules = [self.dyn, self.enc, self.dec, self.pol, self.val]
     self.opt = embodied.jax.Optimizer(
         self.modules, self._make_opt(**config.opt), summary_depth=1,
         name='opt')
@@ -145,8 +148,8 @@ class Agent(embodied.jax.Agent):
       dec_carry, dec_entry, recons = self.dec(dec_carry, feat, reset, **kw)
     
     
-    if self.config.her.enabled:
-      tensor_feat = self.feat2tensor(feat, obs['her_goal']) 
+    if self.config.multigoal_z:
+      tensor_feat = self.feat2tensor(feat, obs['z_goal']) 
     else:
       tensor_feat = self.feat2tensor(feat)
       
@@ -198,16 +201,16 @@ class Agent(embodied.jax.Agent):
     dec_carry, dec_entries, recons = self.dec(
         dec_carry, repfeat, reset, training)
     
-    if self.config.her.enabled:
-        inp = sg(self.feat2tensor(repfeat, obs['her_goal']), skip=self.config.reward_grad)
+    if self.config.multigoal_z:
+        inp = sg(self.feat2tensor(repfeat, obs['z_goal']), skip=self.config.reward_grad)
     else:
         inp = sg(self.feat2tensor(repfeat), skip=self.config.reward_grad)
-        
-    losses['rew'] = self.rew(inp, 2).loss(obs['reward'])
-    con = f32(~obs['is_terminal'])
-    if self.config.contdisc:
-      con *= 1 - 1 / self.config.horizon
-    losses['con'] = self.con(inp, 2).loss(con)
+        losses['rew'] = self.rew(inp, 2).loss(obs['reward'])
+        con = f32(~obs['is_terminal'])
+        if self.config.contdisc:
+          con *= 1 - 1 / self.config.horizon
+        losses['con'] = self.con(inp, 2).loss(con)
+    
     for key, recon in recons.items():
       space, value = self.obs_space[key], obs[key]
       assert value.dtype == space.dtype, (key, space, value.dtype)
@@ -224,14 +227,14 @@ class Agent(embodied.jax.Agent):
     starts = self.dyn.starts(dyn_entries, dyn_carry, K) 
     
     def policyfn(feat):
-      if self.config.her.enabled:
+      if self.config.multigoal_z:
         # Durante el sueño, usamos el goal que inició la trayectoria
-        # obs['her_goal'][:, -K:] tiene forma (B, K, (32, 16) o (32, 64) automáticamente)
-        g_raw = obs['her_goal'][:, -K:]
+        # obs['z_goal'][:, -K:] tiene forma (B, K, (32, 16) o (32, 64) automáticamente)
+        g_raw = obs['z_goal'][:, -K:]
         g = g_raw.reshape((B * K, *g_raw.shape[2:]))
-        assert g.shape == (B * K, *obs['her_goal'].shape[2:]), (
+        assert g.shape == (B * K, *obs['z_goal'].shape[2:]), (
             f"Goal reshape incorrecto: got {g.shape}, "
-            f"expected {(B * K, *obs['her_goal'].shape[2:])}")
+            f"expected {(B * K, *obs['z_goal'].shape[2:])}")
         return sample(self.pol(self.feat2tensor(feat, g), 1))
       else:
         return sample(self.pol(self.feat2tensor(feat), 1))
@@ -246,27 +249,39 @@ class Agent(embodied.jax.Agent):
     assert all(x.shape[:2] == (B * K, H + 1) for x in jax.tree.leaves(imgfeat))
     assert all(x.shape[:2] == (B * K, H + 1) for x in jax.tree.leaves(imgact))
     
-    if self.config.her.enabled:
-        img_goals = sg(obs['her_goal'][:, -K:]) 
+    if self.config.multigoal_z:
+        img_goals = sg(obs['z_goal'][:, -K:]) 
         img_goals = jnp.repeat(img_goals[:, :, None, :], H + 1, axis=2)
         stoch_dims = img_goals.shape[3:]
         img_goals = img_goals.reshape((B * K, H + 1, *stoch_dims))
         inp = self.feat2tensor(imgfeat, img_goals)
+        los, imgloss_out, mets = imag_loss(
+          imgact,
+          jnp.zeros((B * K, H + 1)), # reward de 0s 
+          jnp.ones((B * K, H + 1)),  # reward de 1s
+          self.pol(inp, 2),
+          self.val(inp, 2),
+          self.slowval(inp, 2),
+          self.retnorm, self.valnorm, self.advnorm,
+          update=training,
+          contdisc=self.config.contdisc,
+          horizon=self.config.horizon,
+          **self.config.imag_loss)
     else:
         inp = self.feat2tensor(imgfeat)
+        los, imgloss_out, mets = imag_loss(
+            imgact,
+            self.rew(inp, 2).pred(),
+            self.con(inp, 2).prob(1),
+            self.pol(inp, 2),
+            self.val(inp, 2),
+            self.slowval(inp, 2),
+            self.retnorm, self.valnorm, self.advnorm,
+            update=training,
+            contdisc=self.config.contdisc,
+            horizon=self.config.horizon,
+            **self.config.imag_loss)
         
-    los, imgloss_out, mets = imag_loss(
-        imgact,
-        self.rew(inp, 2).pred(),
-        self.con(inp, 2).prob(1),
-        self.pol(inp, 2),
-        self.val(inp, 2),
-        self.slowval(inp, 2),
-        self.retnorm, self.valnorm, self.advnorm,
-        update=training,
-        contdisc=self.config.contdisc,
-        horizon=self.config.horizon,
-        **self.config.imag_loss)
     losses.update({k: v.mean(1).reshape((B, K)) for k, v in los.items()})
     metrics.update(mets)
 
@@ -275,9 +290,9 @@ class Agent(embodied.jax.Agent):
       feat = sg(repfeat, skip=self.config.repval_grad)
       last, term, rew = [obs[k] for k in ('is_last', 'is_terminal', 'reward')]
       boot = imgloss_out['ret'][:, 0].reshape(B, K)
-      if self.config.her.enabled:
+      if self.config.multigoal_z:
           feat, last, term, rew, boot, goal = jax.tree.map(
-              lambda x: x[:, -K:], (feat, last, term, rew, boot, obs['her_goal']))
+              lambda x: x[:, -K:], (feat, last, term, rew, boot, obs['z_goal']))
           inp = self.feat2tensor(feat, goal)
       else:
           feat, last, term, rew, boot = jax.tree.map(
