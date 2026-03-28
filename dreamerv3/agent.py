@@ -88,12 +88,18 @@ class Agent(embodied.jax.Agent):
         self.modules = [self.dyn, self.enc, self.dec, self.rew, self.con, self.pol, self.val]
     else:
         self.modules = [self.dyn, self.enc, self.dec, self.pol, self.val]
+    
     self.opt = embodied.jax.Optimizer(
         self.modules, self._make_opt(**config.opt), summary_depth=1,
         name='opt')
 
     scales = self.config.loss_scales.copy()
     rec = scales.pop('rec')
+    
+    if self.config.multigoal_z:
+        scales.pop('rew', None)
+        scales.pop('con', None)
+
     scales.update({k: rec for k in dec_space})
     self.scales = scales
 
