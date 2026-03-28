@@ -533,12 +533,12 @@ class TwoRooms(SimpleImageEnv):
         )
         
 
-class HERGoal(SimpleImageEnv):
+class MultiGoal(SimpleImageEnv):
     def __init__(self, task=None, **kwargs):
-        from cookie_env.envs import HEREnv
+        from cookie_env.envs import GoalEnv
         super().__init__(
             task=task,
-            make_env=HEREnv,
+            make_env=GoalEnv,
             full_obs=True,
             rgb_img_obs='full',
             max_steps=1000,

@@ -266,8 +266,8 @@ tworooms:
   run: {steps: 5e4, envs: 1, train_ratio: 256}
 
 
-hergoal:
-  task: hergoal_9
+multigoal:
+  task: multigoal_9
   run: {steps: 1e6, envs: 1, train_ratio: 256}
   her:
     enabled: true

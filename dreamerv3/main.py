@@ -243,7 +243,7 @@ def make_env(config, index, **overrides):
       'cookiepedrofullfixed': 'embodied.envs.new_minigrid:CookiePedroFullFixed',
       'corridor': 'embodied.envs.new_minigrid:Corridor',
       'tworooms': 'embodied.envs.new_minigrid:TwoRooms',
-      'hergoal': 'embodied.envs.new_minigrid:HERGoal',
+      'multigoal': 'embodied.envs.new_minigrid:MultiGoal',
   }[suite]
   if isinstance(ctor, str):
     module, cls = ctor.split(':')
