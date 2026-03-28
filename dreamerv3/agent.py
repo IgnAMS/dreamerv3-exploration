@@ -264,7 +264,7 @@ class Agent(embodied.jax.Agent):
         los, imgloss_out, mets = imag_loss(
           imgact,
           jnp.zeros((B * K, H + 1)), # reward de 0s 
-          jnp.ones((B * K, H + 1)),  # reward de 1s
+          jnp.ones((B * K, H + 1)),  # continues de 1s
           self.pol(inp, 2),
           self.val(inp, 2),
           self.slowval(inp, 2),
