@@ -276,6 +276,8 @@ multigoal:
   agent:
     loss_scales: {rec: 1.0, dyn: 1.0, rep: 0.1, policy: 1.0, value: 1.0, repval: 0.3}  
     contdisc: false
+  env:
+    multigoal: {use_seed: true}
 
 hergoal:
   task: multigoal_9
@@ -288,3 +290,5 @@ hergoal:
   agent:
     loss_scales: {rec: 1.0, dyn: 1.0, rep: 0.1, policy: 1.0, value: 1.0, repval: 0.3}
     contdisc: false
+  env:
+    multigoal: {use_seed: true}
