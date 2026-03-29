@@ -3,8 +3,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 from pathlib import Path
 
-logdir = Path("~/logdir/dreamer/POL_multigoal9/size12m/03").expanduser()
-outdir = Path("plots") / f"single_run_POL_multigoal9_size12m_03"
+logdir = Path("~/logdir/dreamer/POL_multigoal9/size12m/01").expanduser()
+outdir = Path("plots") / f"single_run_POL_multigoal9_size12m_01"
 outdir.mkdir(parents=True, exist_ok=True)
 
 # Cargar scores.jsonl
