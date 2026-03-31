@@ -1,10 +1,11 @@
+
 import json
 import numpy as np
 import matplotlib.pyplot as plt
 from pathlib import Path
 
-logdir = Path("~/logdir/dreamer/POL_multigoal9/size12m/02").expanduser()
-outdir = Path("plots") / f"single_run_POL_multigoal9_size12m_01"
+logdir = Path("~/logdir/dreamer/POL_multigoal9/size12m/06").expanduser()
+outdir = Path("plots") / f"single_run_POL_multigoal9_size12m_06"
 outdir.mkdir(parents=True, exist_ok=True)
 
 # Cargar scores.jsonl
@@ -37,7 +38,7 @@ ax.plot(steps, scores, alpha=0.2, color='#0022ff', linewidth=0.8)
 ax.plot(steps_smooth, scores_smooth, color='#0022ff', linewidth=1.8, label='multigoal Policy')
 ax.set_xlabel("Steps")
 ax.set_ylabel("Episode score")
-ax.set_title("POL_multigoal9 / size12m / 01")
+ax.set_title("POL_multigoal9 / size12m / 06")
 ax.grid(color='#eeeeee')
 ax.legend()
 fig.tight_layout()
