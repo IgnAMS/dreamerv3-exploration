@@ -265,7 +265,7 @@ def make_env(config, index, **overrides):
 def wrap_env(env, config):
   if config.multigoal_z:
     # goal_shape = (config.agent.dyn.rssm.stoch, config.agent.dyn.rssm.classes)
-    if config.env.multigoal_z.fixed_row:
+    if config.env.multigoal.fixed_row:
       goal_shape = (config.agent.dyn.rssm.classes,)
     else:
       goal_shape = (config.agent.dyn.rssm.stoch + config.agent.dyn.rssm.classes,)
