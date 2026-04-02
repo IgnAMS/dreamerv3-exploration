@@ -151,6 +151,7 @@ def train(make_agent, make_replay, make_env, make_stream, make_logger, args):
   driver = embodied.Driver(fns, fixed_row=args.fixed_row, multigoal=args.multigoal_z, parallel=not args.debug)
   driver.on_step(lambda tran, _: step.increment())
   driver.on_step(lambda tran, _: policy_fps.step())
+  print(f"her.enabled: {args.her.enabled}, her.k: {args.her.k}, her.strategy: {args.her.strategy}, fixed_row: {args.fixed_row}, multigoal_z: {args.multigoal_z}")
   if args.her.enabled:
     stoch_rows = args.stoch_size
     stoch_classes = args.stoch_classes
@@ -165,13 +166,13 @@ def train(make_agent, make_replay, make_env, make_stream, make_logger, args):
             target_class = int(np.argmax(goal[stoch_rows:]))
             achieved_class = int(np.argmax(stoch[row_idx]))
         return 0.0 if achieved_class == target_class else -1.0
-      
     her_callback = LatentHERCallback(
         replay,
         space=agent.spaces.keys(),
         reward_fn=reward_fn,
         k=args.her.k,
         strategy=args.her.strategy,
+        fixed_row=args.fixed_row,
     )
     driver.on_step(her_callback)
   else:
