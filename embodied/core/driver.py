@@ -8,11 +8,12 @@ import portal
 
 class Driver:
 
-  def __init__(self, make_env_fns, parallel=True, multigoal=False, **kwargs):
+  def __init__(self, make_env_fns, parallel=True, fixed_row=False, multigoal=False, **kwargs):
     assert len(make_env_fns) >= 1
     self.parallel = parallel
     self.kwargs = kwargs
     self.multigoal = multigoal
+    self.fixed_row = fixed_row
     self.length = len(make_env_fns)
     if parallel:
       import multiprocessing as mp
@@ -75,12 +76,19 @@ class Driver:
         goal = obs['z_goal']
         stoch = outs['dyn/stoch']
         batch_size, stoch_rows, num_classes = stoch.shape
-
-        row_idx = goal[:, :stoch_rows].argmax(axis=1)
-        target_class = goal[:, stoch_rows:].argmax(axis=1)
-        achieved_class = np.array([
-            stoch[i, row_idx[i]].argmax() for i in range(self.length)
-        ])
+        
+        # CASO 1: Fila Fija (goal tiene tamaño num_classes)
+        if goal.shape[-1] == num_classes:
+            target_class = goal.argmax(axis=1)
+            achieved_class = stoch[:, 0].argmax(axis=1)
+            
+        # CASO 2: Fila aleatoria
+        else:
+            row_idx = goal[:, :stoch_rows].argmax(axis=1)
+            target_class = goal[:, stoch_rows:].argmax(axis=1)
+            achieved_class = np.array([
+                stoch[i, row_idx[i]].argmax() for i in range(self.length)
+            ])
 
         reached = (achieved_class == target_class)
 

@@ -57,6 +57,8 @@ def main(argv=None):
       her=config.her,
       multigoal_z=config.multigoal_z,
       stoch_size=config.agent.dyn.rssm.stoch,
+      stoch_classes=config.agent.dyn.rssm.classes,
+      fixed_row=config.env.multigoal.fixed_row,
       replica=config.replica,
       replicas=config.replicas,
       logdir=config.logdir,
@@ -263,7 +265,10 @@ def make_env(config, index, **overrides):
 def wrap_env(env, config):
   if config.multigoal_z:
     # goal_shape = (config.agent.dyn.rssm.stoch, config.agent.dyn.rssm.classes)
-    goal_shape = (config.agent.dyn.rssm.stoch + config.agent.dyn.rssm.classes,)
+    if config.env.multigoal_z.fixed_row:
+      goal_shape = (config.agent.dyn.rssm.classes,)
+    else:
+      goal_shape = (config.agent.dyn.rssm.stoch + config.agent.dyn.rssm.classes,)
     env = embodied.wrappers.GoalConditionedWrapper(env, goal_shape=goal_shape, goal_dtype=np.float32)
   
   for name, space in env.act_space.items():

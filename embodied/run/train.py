@@ -22,12 +22,13 @@ def filtered_replay(replay, space, tran):
   replay.add(filtered)
 
 class LatentHERCallback:
-    def __init__(self, replay, space, reward_fn, k=4, strategy='future'):
+    def __init__(self, replay, space, reward_fn, fixed_row, k=4, strategy='future'):
         self.replay   = replay
         self.space    = space
         self.reward_fn = reward_fn
         self.k        = k
         self.strategy = strategy
+        self.fixed_row = fixed_row
         self.episodes = collections.defaultdict(list)
 
     def _copy_transition(self, tran):
@@ -36,17 +37,27 @@ class LatentHERCallback:
 
     def _stoch_to_goal(self, stoch: np.ndarray) -> np.ndarray:
         """
-        dyn/stoch (stoch_rows, stoch_classes) → double one-hot (stoch_rows + stoch_classes,)
-        Elige una fila al azar y toma el argmax como class_val.
+        Convierte el estado latente stoch en el formato de goal que espera el env.
+        stoch shape: (stoch_rows, stoch_classes) -> e.g., (32, 16)
         """
         stoch_rows, stoch_classes = stoch.shape
-        row_idx   = np.random.randint(0, stoch_rows)
-        class_val = int(np.argmax(stoch[row_idx]))
-        row_oh = np.zeros(stoch_rows,    dtype=np.float32)
-        cls_oh = np.zeros(stoch_classes, dtype=np.float32)
-        row_oh[row_idx]   = 1.0
-        cls_oh[class_val] = 1.0
-        return np.concatenate([row_oh, cls_oh])
+        
+        if self.fixed_row:
+            # CASO FILA FIJA: Siempre usamos la fila 0
+            class_val = np.argmax(stoch[0])
+            cls_oh = np.zeros(stoch_classes, dtype=np.float32)
+            cls_oh[class_val] = 1.0
+            return cls_oh
+        else:
+            # CASO FILA ALEATORIA: Double one-hot (Fila + Clase)
+            row_idx   = np.random.randint(0, stoch_rows)
+            class_val = np.argmax(stoch[row_idx])
+            
+            row_oh = np.zeros(stoch_rows,    dtype=np.float32)
+            cls_oh = np.zeros(stoch_classes, dtype=np.float32)
+            row_oh[row_idx]   = 1.0
+            cls_oh[class_val] = 1.0
+            return np.concatenate([row_oh, cls_oh])
 
     def __call__(self, tran, worker):
         self.episodes[worker].append(tran)
@@ -137,20 +148,26 @@ def train(make_agent, make_replay, make_env, make_stream, make_logger, args):
       epstats.add(result)
 
   fns = [bind(make_env, i) for i in range(args.envs)]
-  driver = embodied.Driver(fns, multigoal=args.multigoal_z, parallel=not args.debug)
+  driver = embodied.Driver(fns, fixed_row=args.fixed_row, multigoal=args.multigoal_z, parallel=not args.debug)
   driver.on_step(lambda tran, _: step.increment())
   driver.on_step(lambda tran, _: policy_fps.step())
   if args.her.enabled:
     stoch_rows = args.stoch_size
+    stoch_classes = args.stoch_classes
     def reward_fn(stoch: np.ndarray, goal: np.ndarray) -> float:
-        # stoch: (32, 16)   goal: (48,)
-        row_idx       = int(np.argmax(goal[:stoch_rows]))
-        target_class  = int(np.argmax(goal[stoch_rows:]))
-        achieved_class = int(np.argmax(stoch[row_idx]))
+        # Caso 1: fixed_row=True -> goal: (classes,)
+        if goal.shape[-1] == stoch_classes:
+            target_class = int(np.argmax(goal))
+            achieved_class = int(np.argmax(stoch[0]))
+        # Caso 2: fixed_row=False -> goal: (stoch+classes,)
+        else:
+            row_idx = int(np.argmax(goal[:stoch_rows]))
+            target_class = int(np.argmax(goal[stoch_rows:]))
+            achieved_class = int(np.argmax(stoch[row_idx]))
         return 0.0 if achieved_class == target_class else -1.0
       
     her_callback = LatentHERCallback(
-      replay,
+        replay,
         space=agent.spaces.keys(),
         reward_fn=reward_fn,
         k=args.her.k,
