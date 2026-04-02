@@ -42,7 +42,7 @@ defaults:
     minecraft: {size: [64, 64], break_speed: 100.0, logs: False, length: 36000}
     dmc: {size: [64, 64], repeat: 1, proprio: True, image: True, camera: -1}
     loconav: {size: [64, 64], repeat: 1, camera: -1}
-    multigoal: {fixed_row: True}
+    multigoal: {fixed_row: False}
 
   replay:
     size: 5e6
@@ -277,6 +277,20 @@ multigoal:
   agent:
     loss_scales: {rec: 1.0, dyn: 1.0, rep: 0.1, policy: 1.0, value: 1.0, repval: 0.3}  
     contdisc: false
+  env: {multigoal: {fixed_row: False}}
+  
+
+multigoalfixed:
+  task: multigoal_9
+  run: {steps: 1e6, envs: 1, train_ratio: 256}
+  multigoal_z: true
+  her:
+    enabled: false
+  agent:
+    loss_scales: {rec: 1.0, dyn: 1.0, rep: 0.1, policy: 1.0, value: 1.0, repval: 0.3}  
+    contdisc: false
+  env: {multigoal: {fixed_row: True}}
+  
 
 hergoal:
   task: multigoal_9
@@ -289,6 +303,8 @@ hergoal:
   agent:
     loss_scales: {rec: 1.0, dyn: 1.0, rep: 0.1, policy: 1.0, value: 1.0, repval: 0.3}
     contdisc: false
+  env: {multigoal: {fixed_row: False}}
+
 
 hergoalfixed:
   task: multigoal_9
