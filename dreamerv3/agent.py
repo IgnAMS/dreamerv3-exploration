@@ -260,10 +260,27 @@ class Agent(embodied.jax.Agent):
         img_goals = jnp.repeat(img_goals[:, :, None, :], H + 1, axis=2)
         stoch_dims = img_goals.shape[3:]
         img_goals = img_goals.reshape((B * K, H + 1, *stoch_dims))
+        
+        stoch_imag = imgfeat['stoch']
+        stoch_classes = self.config.dyn.rssm.classes
+        stoch_rows = self.config.dyn.rssm.stoch
+        if img_goals.shape[-1] == stoch_classes:
+            target_class = jnp.argmax(img_goals, axis=-1)
+            achieved_class = jnp.argmax(stoch_imag[:, :, 0, :], axis=-1)
+        else:
+            row_idx = jnp.argmax(img_goals[..., :stoch_rows], axis=-1)
+            target_class = jnp.argmax(img_goals[..., stoch_rows:], axis=-1)
+            row_mask = jax.nn.one_hot(row_idx, stoch_rows) # Shape: (B*K, H+1, 32)
+            selected_row = jnp.sum(stoch_imag * row_mask[..., None], axis=-2) 
+            achieved_class = jnp.argmax(selected_row, axis=-1)
+        
+        exact_reward = jnp.where(achieved_class == target_class, 0.0, -1.0).astype(jnp.float32)
+        exact_reward = sg(exact_reward)
+        
         inp = self.feat2tensor(imgfeat, img_goals)
         los, imgloss_out, mets = imag_loss(
           imgact,
-          jnp.zeros((B * K, H + 1)), # reward de 0s 
+          exact_reward, # reward de 0s 
           jnp.ones((B * K, H + 1)),  # continues de 1s
           self.pol(inp, 2),
           self.val(inp, 2),
