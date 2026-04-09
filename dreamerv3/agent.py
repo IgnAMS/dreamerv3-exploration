@@ -172,6 +172,7 @@ class Agent(embodied.jax.Agent):
     return carry, act, out
 
   def train(self, carry, data):
+    print("Training :)")
     carry, obs, prevact, stepid = self._apply_replay_context(carry, data)
     metrics, (carry, entries, outs, mets) = self.opt(
         self.loss, carry, obs, prevact, training=True, has_aux=True)
@@ -230,6 +231,10 @@ class Agent(embodied.jax.Agent):
     # Imagination
     K = min(self.config.imag_last or T, T)
     H = self.config.imag_length
+    # B: Batch size. configurado en configs
+    # T: Report length. configurable en configs.
+    # K: Cantidad de puntos de partida. imag_length 
+    # H: Horizonte de imaginación
     print(f"B: {B}, K: {K}, T: {T}, H: {H}")
     """
     real_stoch = repfeat['stoch']
