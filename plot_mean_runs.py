@@ -7,8 +7,8 @@ from pathlib import Path
 BASE = Path("~/logdir/dreamer").expanduser()
 EXPERIMENTS = {
     'POL multigoalfixed10': ('POL_multigoalfixed10/size12m', '#0022ff'),
-    'POL HER hergoalfixed10': ('POL_HER_hergoalfixed10/size12m', '#ff4400'),
-    'POL multigoal9': ('POL_multigoal9/size12m', '#00aa44'),
+#     'POL HER hergoalfixed10': ('POL_HER_hergoalfixed10/size12m', '#ff4400'),
+#     'POL multigoal9': ('POL_multigoal9/size12m', '#00aa44'),
 }
 RUNS = ['01', '02', '03', '04', '05']
 
