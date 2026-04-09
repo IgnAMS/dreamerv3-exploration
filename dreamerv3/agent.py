@@ -230,6 +230,26 @@ class Agent(embodied.jax.Agent):
     # Imagination
     K = min(self.config.imag_last or T, T)
     H = self.config.imag_length
+    print(f"B: {B}, K: {K}, T: {T}, H: {H}")
+    """
+    real_stoch = repfeat['stoch']
+    if self.config.multigoal_z and training:
+        # --- ESTRATEGIA HER "FUTURE" ---
+        # Para cada uno de los K puntos de inicio, elegimos un estado futuro real como meta.
+        # Esto asegura que la política siempre vea metas que son alcanzables.
+        
+        # Creamos índices aleatorios que apunten al futuro dentro de la secuencia T
+        # (Esto es una simplificación, en JAX pro usaríamos jax.random)
+        indices_t = jnp.arange(T)
+        # Para cada punto de inicio en K, elegimos un índice >= t
+        # Aquí un ejemplo simple: usar el último estado de la secuencia como meta 'hindsight'
+        her_goals = real_stoch[:, -1:] # Tomamos el último estado de cada secuencia (B, 1, 32, 16)
+        her_goals = jnp.repeat(her_goals, K, axis=1) # Lo expandimos para los K puntos de inicio
+        current_goals = her_goals # O la mezcla de ambos
+    else:
+        current_goals = obs['z_goal'][:, -K:]
+    """
+    
     starts = self.dyn.starts(dyn_entries, dyn_carry, K) 
     
     def policyfn(feat):
