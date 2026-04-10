@@ -192,6 +192,7 @@ def train(make_agent, make_replay, make_env, make_stream, make_logger, args):
     if len(replay) < args.batch_size * args.batch_length:
       return
     for _ in range(should_train(step)):
+      print("Entrenando!")
       with elements.timer.section('stream_next'):
         batch = next(stream_train)
       carry_train[0], outs, mets = agent.train(carry_train[0], batch)
